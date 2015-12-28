@@ -20,25 +20,30 @@ metadata {
 		capability "Polling"
 		capability "Refresh"
 		capability "Sensor"
-		capability "Configuration"
         
 		attribute "ignoreStartLevel", "string"
         attribute "invertSwitch", "string"
-        attribute "onOffFadeDuration", "number"
+        attribute "onOffFadeRate", "number"
+        attribute "onOffFadeSteps", "number"
         attribute "onOffFadeDurationDisplay", "string"
-        attribute "onOffFadeDurationSlider", "number"
-        attribute "dimFadeDuration", "number"
-        attribute "manualFadeDuration", "number"
-        
+        attribute "dimFadeRate", "number"
+        attribute "dimFadeSteps", "number"
+        attribute "dimFadeDurationDisplay", "string"
+        attribute "manualFadeRate", "number"
+        attribute "manualFadeSteps", "number"
+        attribute "manualFadeDurationDisplay", "string"
+
+        command "setOnOffFadeRate"
+        command "setOnOffFadeSteps"
+        command "setManualFadeRate"
+        command "setManualFadeSteps"
+        command "setDimFadeRate"
+        command "setDimFadeSteps"
         command "invertSwitch"
+        command "toggleInvertSwitch"
         command "ignoreStartLevel"
-        command "setOnOffFadeDuration"
-        command "setOnOffFadeDurationSlider"
-        command "clearOnOffFadeDuration"
-        command "restoreOnOffFadeDuration"
-        command "setDimFadeDuration"
-        command "setManualFadeDuration"
-        
+        command "toggleIgnoreStartLevel"
+
 		fingerprint inClusters: "0x26"
 	}
 
@@ -61,7 +66,7 @@ metadata {
 	}
 
 	tiles(scale: 2) {
-		multiAttributeTile(name:"switch", type: "lighting", width: 6, height: 4, canChangeIcon: true){
+		multiAttributeTile(name:"switch", type: "lighting", width: 6, height: 4, canChangeIcon: true) {
 			tileAttribute ("device.switch", key: "PRIMARY_CONTROL") {
 				attributeState "on", label:'${name}', action:"switch.off", icon:"st.switches.switch.on", backgroundColor:"#79b821", nextState:"turningOff"
 				attributeState "off", label:'${name}', action:"switch.on", icon:"st.switches.switch.off", backgroundColor:"#ffffff", nextState:"turningOn"
@@ -73,144 +78,71 @@ metadata {
 			}
 		}
 
-		standardTile("indicator", "device.indicatorStatus", width: 2, height: 2, inactiveLabel: false, decoration: "flat") {
+		standardTile("indicator", "device.indicatorStatus", width: 2, height: 2, decoration: "flat") {
 			state "when off", action:"indicator.indicatorWhenOn", icon:"st.indicators.lit-when-off"
 			state "when on", action:"indicator.indicatorNever", icon:"st.indicators.lit-when-on"
 			state "never", action:"indicator.indicatorWhenOff", icon:"st.indicators.never-lit"
 		}
-        
-		standardTile("configure", "device.configure", inactiveLabel: false, decoration: "flat", width: 2, height: 2) {
-			state "configure", label:'', action:"configuration.configure", icon:"st.secondary.configure"
-		}
 
-		standardTile("refresh", "device.switch", width: 2, height: 2, inactiveLabel: false, decoration: "flat") {
+		standardTile("refresh", "device.switch", width: 2, height: 2, decoration: "flat") {
 			state "default", label:'', action:"refresh.refresh", icon:"st.secondary.refresh"
 		}
 
-		valueTile("level", "device.level", inactiveLabel: false, decoration: "flat", width: 2, height: 2) {
+		valueTile("level", "device.level", decoration: "flat", width: 2, height: 2) {
 			state "level", label:'${currentValue} %', unit:"%", backgroundColor:"#ffffff"
 		}
+        
+		controlTile("onOffFadeRate", "device.onOffFadeRate", "slider", width: 4, height: 1, range: '(1..255)') {
+			state "default", action:"setOnOffFadeRate"
+		}
 
-		standardTile("refresh", "device.switch", width: 2, height: 2, inactiveLabel: false, decoration: "flat") {
-			state "default", label:'', action:"refresh.refresh", icon:"st.secondary.refresh"
+		controlTile("onOffFadeSteps", "device.onOffFadeSteps", "slider", width: 4, height: 1, range: '(1..99)') {
+			state "default", action:"setOnOffFadeSteps"
 		}
         
-		multiAttributeTile(name:"onOffFadeMulti", type: "generic", width: 6, height: 4){
-			tileAttribute ("device.onOffFadeDurationDisplay", key: "PRIMARY_CONTROL") {
-				attributeState "default", label:'${currentValue}', action:"clearOnOffFadeDuration", backgroundColors: [
-                    [value: 0, color: "#ffffff"],
-                    [value: 3.3, color: "#888888"],
-                    [value: 252.45, color: "#aaaa88"]
-                ]
-				attributeState "0.0", label:'Instant', action:"restoreOnOffFadeDuration", backgroundColor:"#dddddd"
-			}
-			tileAttribute ("device.onOffFadeDurationDisplay", key: "SECONDARY_CONTROL") {
-				attributeState "default", label:'Manual Dimming \u2014 ${currentValue} seconds from 1-99'
-			}
-			tileAttribute ("device.onOffFadeDurationSlider", key: "SLIDER_CONTROL", range:'(0..5)') {
-				attributeState "default", action:"setOnOffFadeDurationSlider", icon: 'st.Office.office6'
-			}
+		valueTile("onOffFade", "device.onOffFadeDurationDisplay", decoration: "flat", width: 2, height: 2) {
+			state "default", label:'${currentValue} on/off'
 		}
         
-		valueTile("onOffFade", "device.onOffFadeDuration", inactiveLabel: false, decoration: "flat", width: 2, height: 1) {
-			state "default", action:"clearOnOffFadeDuration", label:'${currentValue} secs on/off fade', unit:"seconds", backgroundColors: [
-                [value: 0, color: "#ffffff"],
-                [value: 3.3, color: "#888888"],
-                [value: 252.45, color: "#aaaa88"]
-            ]
-			state "0.00", label:'INSTANT on/off', action:"restoreOnOffFadeDuration", backgroundColor:"#dddddd"
+		controlTile("manualFadeRate", "device.manualFadeRate", "slider", width: 4, height: 1, range: '(1..255)') {
+			state "default", action:"setManualFadeRate"
+		}
+
+		controlTile("manualFadeSteps", "device.manualFadeSteps", "slider", width: 4, height: 1, range: '(1..99)') {
+			state "default", action:"setManualFadeSteps"
 		}
         
-		controlTile("onOffFadeSlider", "device.onOffFadeDurationSlider", "slider", width: 4, height: 1) {
-			state "default", action:"setOnOffFadeDurationSlider"
+		valueTile("manualFade", "device.manualFadeDurationDisplay", decoration: "flat", width: 2, height: 2) {
+			state "default", label:'${currentValue} manual dim'
+		}
+  
+  		controlTile("dimFadeRate", "device.dimFadeRate", "slider", width: 4, height: 1, range: '(1..255)') {
+			state "default", action:"setDimFadeRate"
+		}
+
+		controlTile("dimFadeSteps", "device.dimFadeSteps", "slider", width: 4, height: 1, range: '(1..99)') {
+			state "default", action:"setDimFadeSteps"
 		}
         
-		valueTile("dimFade", "dimFadeDuration", inactiveLabel: false, decoration: "flat", width: 2, height: 2) {
-			state "default", label:'${currentValue}s dimmer fade', unit:"seconds", backgroundColor:"#ffffff"
+		valueTile("dimFade", "device.dimFadeDurationDisplay", decoration: "flat", width: 2, height: 2) {
+			state "default", label:'${currentValue} dim'
 		}
         
-		valueTile("manualFade", "manualFadeDuration", inactiveLabel: false, decoration: "flat", width: 2, height: 2) {
-			state "default", label:'${currentValue}s manual fade', unit:"seconds", backgroundColor:"#ffffff"
+		valueTile("invert", "device.invertSwitch", width: 3, height: 1, decoration: "flat") {
+			state "default", label: 'switch ${currentValue}', action:"toggleInvertSwitch"
 		}
         
-		standardTile("invert", "device.invertSwitch", width: 2, height: 2, inactiveLabel: false, decoration: "flat") {
-			state "normal", label: "Switch Inverted", action:"device.invertSwitch"
-			state "inverted", label: "Normal Switch", action:"device.normalSwitch"
-		}
-        
-		standardTile("ignoreStartLevel", "device.ignoreStartLevel", width: 2, height: 2, inactiveLabel: false, decoration: "flat") {
-			state "use", label: "Using Start Level", action:"device.ignoreStartLevel"
-			state "ignore", label: "Ignoring Start Level", action:"device.useStartLevel"
+		valueTile("ignoreStartLevel", "device.ignoreStartLevel", width: 3, height: 1, decoration: "flat") {
+			state "default", label: '${currentValue} start level', action:"toggleIgnoreStartLevel"
 		}
 
 		main(["switch"])
-		details(["switch", "level", "configure", "refresh", "onOffFade", "onOffFadeSlider", "onOffFadeMulti", "dimFade", "manualFade", "indicator", "invert", "ignoreStartLevel"])
+		details(["switch", "level", "indicator", "refresh",
+        	"onOffFadeRateLabel", "onOffFadeRate", "onOffFadeSteps", "onOffFade",
+            "manualFadeRate", "manualFadeSteps", "manualFade",
+            "dimFadeRate", "dimFadeSteps", "dimFade",
+            "invert", "ignoreStartLevel"])
 	}
-    
-    preferences {
-        // Parameter No: 4
-        // Length: 1 Byte
-        // Valid Values = 0 or 1 (default 0)
-        input "invertSwitch", "bool",
-            title: "Invert Switch?",
-            description: """If the switch is accidentally installed upside down with “On” at the bottom 
-				and “Off” at the top, the default On/Off rocker settings can be reversed."""
-		    defaultValue: false
-
-        // When Receiving an All-On or All-Off Command
-        // Parameter 11 (number of steps or levels)
-        // Parameter 12 (timing of the steps)
-        // Length: 1 Byte
-        // Valid Values:
-        //     Parameter 11 (default = 1) Valid Values: 1-99
-        //     Parameter 12 (default = 3) Valid Values: 1-255
-        input "onOffFadeDuration", "decimal",
-            title: "Fade On/Off",
-            description: "seconds to fade fully from 1 to 99 (default is 3.0)",
-            range: "0..250"
-
-        // Both the number of steps (or levels) that the dimmer will change and the timing
-        // of the steps can be modified to suit personal preferences. The timing of the
-        // steps can be adjusted in 10 millisecond intervals.
-
-        // When Receiving a Z-Wave Dim Command
-        // Parameter 7 (number of steps or levels)
-        //     NOTE this is confusingly the SIZE of the steps (e.g. 1 = 1% per step)
-        // Parameter 8 (timing of the steps)
-        // Length: 1 Byte
-        // Valid Values:
-        //     Parameter 7 (default = 1) Valid Values: 1-99
-        //     Parameter 8 (default = 3) Valid Values: 1-255
-        // UI input fade duration; must convert (inverse) to rate + step size.
-        input "dimFadeDuration", "decimal",
-            title: "Fade Dimming",
-            description: "seconds to fade fully from 1 to 99 (default is 3.0)",
-            range: "0..250"
-
-        // Manual Control Dimming (pressing the Dimmer’s rocker)
-        // Parameter 9 (number of steps or levels)
-        // Parameter 10 (timing of the steps)
-        // Length: 1 Byte
-        // Valid Values:
-        //     Parameter 9 (default = 1) Valid Values: 1-99
-        //     Parameter 10 (default = 3) Valid Values: 1-255
-        input "manualFadeDuration", "decimal",
-            title: "Fade Manual Dimming",
-            description: "seconds to fade fully from 1 to 99 (default is 3.0)",
-            range: "0..250"
-
-        // Ignore Start Level When Receiving Dim Commands
-        // Please note: Every “Dim” command includes a start level embedded in it.
-        // The 45639 can be set to ignore the start level that is part of the dim command.
-        // Setting parameter 5 to a value of 0 will cause the 45639 to dim or brighten from
-        // the start level embedded in the command.
-        // Parameter No: 5
-        // Length: 1 Byte
-        // Valid Values = 0 or 1 (default 1)
-        input "ignoreStartLevel", "bool",
-            title: "Ignore Start Level?",
-            defaultValue: true
-    }
 }
 
 def parse(String description) {
@@ -259,50 +191,51 @@ private dimmerEvents(physicalgraph.zwave.Command cmd) {
 def synchronized zwaveEvent(physicalgraph.zwave.commands.configurationv1.ConfigurationReport cmd) {
 	log.debug "ConfigurationReport $cmd"
     def value = cmd.configurationValue[0]
-
-    switch (cmd.parameterNumber) {
-	    case 11:
-	        data.onOffFadeRate = value
-            break
-        case 12:
-        	data.onOffFadeSteps = value
-            break
-	}
-
+    	
 	switch (cmd.parameterNumber) {
-    case 3:
-        return createEvent([name: "indicatorStatus", value:
+    case 3: return createEvent([name: "indicatorStatus", value:
         	value == 1 ? "when on" : value == 2 ? "never" : "when off"])
-    case 4:
-		return createEvent(name: "invertSwitch", value: value == 1 ? "inverted" : "normal")
-    case 5:
-        return createEvent(name: "ignoreStartLevel", value: value == 1 ? "ignore" : "use")
-    case 11: case 12:
-		return data.onOffFadeRate == null || data.onOffFadeSteps == null ? null : [
-        	createEvent(name: "onOffFadeDuration", value:
-        		getFadeDuration(data.onOffFadeRate, data.onOffFadeSteps), unit: "seconds"),
+    case 4: return createEvent(name: "invertSwitch", value: value == 1 ? "inverted" : "normal")
+    case 5: return createEvent(name: "ignoreStartLevel", value: value == 1 ? "ignoring" : "using")
+    
+    case 12: return [createEvent(name: "onOffFadeRate", value: value),
         	createEvent(name: "onOffFadeDurationDisplay", value:
-        		String.format("%.2f", getFadeDuration(data.onOffFadeRate, data.onOffFadeSteps)),
-                displayed: false),
-        	createEvent(name: "onOffFadeDurationSlider", value:
-        		fadeDurationToSlider(getFadeDuration(data.onOffFadeRate, data.onOffFadeSteps)),
+        		String.format("%.2f seconds", getFadeDuration(
+                	device.currentValue("onOffFadeRate"),
+                    device.currentValue("onOffFadeSteps"))),
+                displayed: false)]
+    case 11: return [createEvent(name: "onOffFadeSteps", value: value),
+        	createEvent(name: "onOffFadeDurationDisplay", value:
+        		String.format("%.2f seconds", getFadeDuration(
+                	device.currentValue("onOffFadeRate"),
+                    device.currentValue("onOffFadeSteps"))),
                 displayed: false)]   
-    case 7:
-        data.dimFadeRate = value
-		return data.dimFadeSteps == null ? null : createEvent(name: "dimFadeDuration", value: 
-        	getFadeDuration(data.dimFadeRate, data.dimFadeSteps), unit: "seconds")
-	case 8:
-    	data.dimFadeSteps = value
-		return data.dimFadeRate == null ? null : createEvent(name: "dimFadeDuration", value: 
-        	getFadeDuration(data.dimFadeRate, data.dimFadeSteps), unit: "seconds")
-    case 9:
-        data.manualFadeRate = value
-		return data.manualFadeSteps == null ? null : createEvent(name: "manualFadeDuration", value: 
-        	getFadeDuration(data.manualFadeRate, data.manualFadeSteps), unit: "seconds")
-	case 10:
-    	data.manualFadeSteps = value
-		return data.manualFadeRate == null ? null : createEvent(name: "manualFadeDuration", value: 
-        	getFadeDuration(data.manualFadeRate, data.manualFadeSteps), unit: "seconds")
+                
+    case 8: return [createEvent(name: "manualFadeRate", value: value),
+        	createEvent(name: "manualFadeDurationDisplay", value:
+        		String.format("%.2f seconds", getFadeDuration(
+                	device.currentValue("manualFadeRate"),
+                    device.currentValue("manualFadeSteps"))),
+                displayed: false)]
+    case 7: return [createEvent(name: "manualFadeSteps", value: value),
+        	createEvent(name: "manualFadeDurationDisplay", value:
+        		String.format("%.2f seconds", getFadeDuration(
+                	device.currentValue("manualFadeRate"),
+                    device.currentValue("manualFadeSteps"))),
+                displayed: false)]   
+
+    case 10: return [createEvent(name: "dimFadeRate", value: value),
+        	createEvent(name: "dimFadeDurationDisplay", value:
+        		String.format("%.2f seconds", getFadeDuration(
+                	device.currentValue("dimFadeRate"),
+                    device.currentValue("dimFadeSteps"))),
+                displayed: false)]
+    case 9: return [createEvent(name: "dimFadeSteps", value: value),
+        	createEvent(name: "dimFadeDurationDisplay", value:
+        		String.format("%.2f seconds", getFadeDuration(
+                	device.currentValue("dimFadeRate"),
+                    device.currentValue("dimFadeSteps"))),
+                displayed: false)]   
 	}
 }
 
@@ -377,37 +310,45 @@ def refresh() {
 	if (getDataValue("MSR") == null) {
 		commands << zwave.manufacturerSpecificV1.manufacturerSpecificGet().format()
 	}
+	commands << zwave.configurationV1.configurationGet(parameterNumber: 11).format()
+	commands << zwave.configurationV1.configurationGet(parameterNumber: 7).format()
+	commands << zwave.configurationV1.configurationGet(parameterNumber: 9).format()
 	commands << zwave.configurationV1.configurationGet(parameterNumber: 3).format()
 	commands << zwave.configurationV1.configurationGet(parameterNumber: 4).format()
 	commands << zwave.configurationV1.configurationGet(parameterNumber: 5).format()
-	commands << zwave.configurationV1.configurationGet(parameterNumber: 11).format()
 	commands << zwave.configurationV1.configurationGet(parameterNumber: 12).format()
-	commands << zwave.configurationV1.configurationGet(parameterNumber: 7).format()
 	commands << zwave.configurationV1.configurationGet(parameterNumber: 8).format()
-	commands << zwave.configurationV1.configurationGet(parameterNumber: 9).format()
 	commands << zwave.configurationV1.configurationGet(parameterNumber: 10).format()
 	delayBetween(commands, 1000)
 }
 
 def indicatorWhenOn() {
+	log.debug "indicatorWhenOn()"
 	delayBetween([
     	zwave.configurationV1.configurationSet(configurationValue: [1], parameterNumber: 3, size: 1).format(),
 		zwave.configurationV1.configurationGet(parameterNumber: 3).format()])
 }
 
 def indicatorWhenOff() {
+	log.debug "indicatorWhenOff()"
 	delayBetween([
     	zwave.configurationV1.configurationSet(configurationValue: [0], parameterNumber: 3, size: 1).format(),
     	zwave.configurationV1.configurationGet(parameterNumber: 3).format()])
 }
 
 def indicatorNever() {
+	log.debug "indicatorNever()"
 	delayBetween([
     	zwave.configurationV1.configurationSet(configurationValue: [2], parameterNumber: 3, size: 1).format(),
     	zwave.configurationV1.configurationGet(parameterNumber: 3).format()])
 }
 
+def toggleInvertSwitch() {
+	invertSwitch(device.currentValue("invertSwitch") == "inverted" ? false : true)
+}
+
 def invertSwitch(invert=true) {
+	log.debug "invertSwitch(invert=$invert)"
 	if (invert) {
 		delayBetween([
         	zwave.configurationV1.configurationSet(configurationValue: [1], parameterNumber: 4, size: 1).format(),
@@ -420,7 +361,12 @@ def invertSwitch(invert=true) {
 	}
 }
 
+def toggleIgnoreStartLevel() {
+	ignoreStartLevel(device.currentValue("ignoreStartLevel") == "using" ? true : false)
+}
+
 def ignoreStartLevel(ignore=true) {
+	log.debug "ignoreStartLevel(ignore=$ignore)"
 	if (ignore) {
 		delayBetween([
         	zwave.configurationV1.configurationSet(configurationValue: [1], parameterNumber: 5, size: 1).format(),
@@ -433,109 +379,64 @@ def ignoreStartLevel(ignore=true) {
 	}
 }
 
-def clearOnOffFadeDuration() {
-	setOnOffFadeDuration(0.0)
-}
-
-def restoreOnOffFadeDuration() {
-    setOnOffFadeDuration(data.restoreOnOffFadeDuration ?: 0.33)
-}
-
-def setOnOffFadeDurationSlider(percent) {
-	setOnOffFadeDuration(sliderToFadeDuration(percent))
-}
-
-def setOnOffFadeDuration(duration) {
-	def values = getDimRateAndSteps(duration), rate = values[0], steps = values[1]
-	log.debug "onOffFadeDuration: ${duration}, rate: ${rate}, steps: ${steps}"
-    data.onOffFadeRate = data.onOffFadeSteps = null
-    data.restoreOnOffFadeDuration = device.currentValue("onOffFadeDuration")
-    delayBetween([
-    	delayBetween([
-            zwave.configurationV1.configurationSet(configurationValue: [rate], parameterNumber: 11, size: 1).format(),
-            zwave.configurationV1.configurationSet(configurationValue: [steps], parameterNumber: 12, size: 1).format()
-        ], 100),
-		zwave.configurationV1.configurationGet(parameterNumber: 11).format(),
+def setOnOffFadeRate(rate) {
+	log.debug "setOnOffFadeRate(rate=$rate)"
+	if (rate < 1) rate = 1
+    if (rate > 99) rate = 255
+	delayBetween([
+    	zwave.configurationV1.configurationSet(configurationValue: [rate], parameterNumber: 12, size: 1).format(),
 		zwave.configurationV1.configurationGet(parameterNumber: 12).format()
-    ], 1000)
+    ])
 }
 
-def setDimFadeDuration(duration) {
-	def values = getDimRateAndSteps(duration), rate = values[0], steps = values[1]
-	log.debug "dimFadeDuration: ${duration}, rate: ${rate}, steps: ${steps}"
-    data.dimFadeRate = data.dimFadeSteps = null
-    delayBetween([
-		zwave.configurationV1.configurationSet(configurationValue: [rate], parameterNumber: 7, size: 1).format(),
-		zwave.configurationV1.configurationSet(configurationValue: [steps], parameterNumber: 8, size: 1).format(),
-		zwave.configurationV1.configurationGet(parameterNumber: 7).format(),
+def setOnOffFadeSteps(steps) {
+	log.debug "setOnOffFadeSteps(steps=$steps)"
+	if (steps < 1) steps = 1
+    if (steps > 99) steps = 99
+	delayBetween([
+    	zwave.configurationV1.configurationSet(configurationValue: [steps], parameterNumber: 11, size: 1).format(),
+		zwave.configurationV1.configurationGet(parameterNumber: 11).format()
+    ])
+}
+
+def setManualFadeRate(rate) {
+	log.debug "setManualFadeRate(rate=$rate)"
+	if (rate < 1) rate = 1
+    if (rate > 99) rate = 255
+	delayBetween([
+    	zwave.configurationV1.configurationSet(configurationValue: [rate], parameterNumber: 8, size: 1).format(),
 		zwave.configurationV1.configurationGet(parameterNumber: 8).format()
-    ], 100)
+    ])
 }
 
-def setManualFadeDuration(duration) {
-	def values = getDimRateAndSteps(duration), rate = values[0], steps = values[1]
-	log.debug "manualFadeDuration: ${duration}, rate: ${rate}, steps: ${steps}"
-    data.manualFadeRate = data.manualFadeSteps = null
-    delayBetween([
-		zwave.configurationV1.configurationSet(configurationValue: [rate], parameterNumber: 9, size: 1).format(),
-		zwave.configurationV1.configurationSet(configurationValue: [steps], parameterNumber: 10, size: 1).format(),
-        zwave.configurationV1.configurationGet(parameterNumber: 9).format(),
+def setManualFadeSteps(steps) {
+	log.debug "setManualFadeSteps(steps=$steps)"
+	if (steps < 1) steps = 1
+    if (steps > 99) steps = 99
+	delayBetween([
+    	zwave.configurationV1.configurationSet(configurationValue: [steps], parameterNumber: 7, size: 1).format(),
+		zwave.configurationV1.configurationGet(parameterNumber: 7).format()
+    ])
+}
+
+def setDimFadeRate(rate) {
+	log.debug "setDimFadeRate(rate=$rate)"
+	if (rate < 1) rate = 1
+    if (rate > 99) rate = 255
+	delayBetween([
+    	zwave.configurationV1.configurationSet(configurationValue: [rate], parameterNumber: 10, size: 1).format(),
 		zwave.configurationV1.configurationGet(parameterNumber: 10).format()
-    ], 100)
+    ])
 }
 
-def configure() {
-	log.debug "configuring..."
-    def commands = []
-
-	if (settings.indicator == "when off") {
-    	commands << indicatorWhenOn()
-    } else if (settings.indicator == "never") {
-    	commands << indicatorWhenOff()
-    } else { // "when on"
-    	commands << indicatorWhenOff()
-    }
-	
-	commands << invertSwitch(settings.invertSwitch)
-    
-    commands << ignoreStartLevel(settings.ignoreStartLevel)
-    
-    commands << setOnOffFadeDuration(settings.onOffFadeDuration ?: 3)
-    commands << setDimFadeDuration(settings.dimFadeDuration ?: 3)
-    commands << setManualFadeDuration(settings.manualFadeDuration ?: 3)
-    
-    log.debug "commands: $commands"
-    commands
-}
-
-def getDimRateAndSteps(duration) {
-    // The first of these parameters is the “dim step” (dim rate) parameter. 
-    // It can be set to a value of 1 to 99. This value indicates how many levels
-    // the dimmer will change when the timer (discussed below) expires.
-    // The second parameter is the timing (how fast the dim rate) parameter.
-    // It can be set to a value of 1 to 255. This value indicates in 10 millisecond
-    // resolution, how often the dim level will change. For example, if you set
-    // this parameter to 1, then every 10mS the dim level will change. If you
-    // set it to 255, then every 2.55 seconds the dim level will change.
-    // With the combination of the two parameters that can control the dim rate,
-    // the dimmer can be adjusted to dim from maximum to minimum or minimum to
-    // maximum at various speeds between 10 millisecond and 252.45 seconds (over 4 minutes).
-    if (duration <= 0.01) {
-    	return [1, 99]
-    }
-    if (duration >= 252.45) {
-    	return [255, 1]
-    }
-    def minDim = 1.0
-    def availableSteps = 99.0 - minDim + 1.0
-    def durationTicks = duration * 100.0 // number of 10ms ticks desired
-    def stepSize = 1.0 // assume want to fade as smoothly as possible
-    def rate = durationTicks / stepSize / availableSteps // number of ticks per step
-    if (rate < 1.0) { // step size needs to increase to fade any faster than 10s
-    	stepSize = availableSteps * rate
-    	rate = 1.0
-    }
-	return [rate.intValue(), stepSize.intValue()]
+def setDimFadeSteps(steps) {
+	log.debug "setDimFadeSteps(steps=$steps)"
+	if (steps < 1) steps = 1
+    if (steps > 99) steps = 99
+	delayBetween([
+    	zwave.configurationV1.configurationSet(configurationValue: [steps], parameterNumber: 9, size: 1).format(),
+		zwave.configurationV1.configurationGet(parameterNumber: 9).format()
+    ])
 }
 
 def getFadeDuration(rate, steps) {
@@ -545,25 +446,5 @@ def getFadeDuration(rate, steps) {
         def minDim = 1.0
         def availableSteps = 99 - minDim + 1
         return ((availableSteps / steps) * rate / 100.0).setScale(2, BigDecimal.ROUND_HALF_UP)
-    }
-}
-
-def sliderToFadeDuration(percent) {
-	if (percent == null) {
-    	null
-	} else if (0.0 <= percent && percent <= 50.0) {
-    	(percent / 50.0) * 3.3
-	} else {
-    	3.3 + (((percent - 50.0) / 50.0) * (252.45 - 3.3))
-	}
-}
-
-def fadeDurationToSlider(duration) {
-	if (duration == null) {
-    	null
-	} else if (0.0 <= duration && duration <= 3.3) {
-    	(duration / 3.3 * 50.0).intValue()
-	} else {
-    	((duration - 3.3) / (252.45 - 3.3) * 50.0 + 50.0).intValue()
     }
 }
