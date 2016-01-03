@@ -139,7 +139,7 @@ def codeUsed(evt) {
                 sendCode = "$it.value"
             }
         }
-        def message = "$evt.displayName was unlocked by $username in user slot $codeData.usedCode"
+        def message = "$evt.displayName was unlocked by $username" // in user slot $codeData.usedCode"
         if(sendCode == "Yes") {
             send(message)
         }
