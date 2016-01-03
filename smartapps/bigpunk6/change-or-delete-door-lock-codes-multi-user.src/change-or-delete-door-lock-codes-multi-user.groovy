@@ -21,44 +21,45 @@ preferences {
                 input "locks","capability.lockCodes", title: "Locks", multiple: true
         }
         section( "Notifications" ) {
-            input "sendPushMessage", "enum", title: "Send a push notification?", metadata:[values:["Yes","No"]], required:false
-            input "phone", "phone", title: "Send a Text Message?", required: false
+            //input "sendPushMessage", "enum", title: "Send a push notification?", metadata:[values:["Yes","No"]], required:false
+            input "sendPushMessage", "bool", title: "Send a push notification?", defaultValue: false
+            input "phone", "phone", title: "Send a Text Message?", description: "Phone Number", required: false
         }
     }
     page(name: "page2", title: "Set user preferences", nextPage: "page3", uninstall: true) {
         section("User 1") {
             input "username1", "text", title: "Name for User", required:false
             input "code1", "text", title: "Code (4 to 8 digits) or X to Delete", required:false
-            input "sendCode1", "enum", title: "Send notification when users code is used", metadata:[values:["Yes","No"]], required:false
+            input "sendCode1", "bool", title: "Send notification when users code is used", defaultValue: false
         }
         section("User 2") {
             input "username2", "text", title: "Name for User", required:false
             input "code2", "text", title: "Code (4 to 8 digits) or X to Delete", required:false
-            input "sendCode2", "enum", title: "Send notification when users code is used", metadata:[values:["Yes","No"]], required:false
+            input "sendCode2", "bool", title: "Send notification when users code is used", defaultValue: false
         }
     }
     page(name: "page3", title: "Set user preferences", nextPage: "page4", uninstall: true) {
         section("User 3") {
             input "username3", "text", title: "Name for User", required:false
             input "code3", "text", title: "Code (4 to 8 digits) or X to Delete", required:false
-            input "sendCode3", "enum", title: "Send notification when users code is used", metadata:[values:["Yes","No"]], required:false
+            input "sendCode3", "bool", title: "Send notification when users code is used", defaultValue: false
         }
         section("User 4") {
             input "username4", "text", title: "Name for User", required:false
             input "code4", "text", title: "Code (4 to 8 digits) or X to Delete", required:false
-            input "sendCode4", "enum", title: "Send notification when users code is used", metadata:[values:["Yes","No"]], required:false
+            input "sendCode4", "bool", title: "Send notification when users code is used", defaultValue: false
         }
     }
     page(name: "page4", title: "Set user preferences", nextPage: "page4", install: true, uninstall: true) {
         section("User 5") {
             input "username5", "text", title: "Name for User", required:false
             input "code5", "text", title: "Code (4 to 8 digits) or X to Delete", required:false
-            input "sendCode5", "enum", title: "Send notification when users code is used", metadata:[values:["Yes","No"]], required:false
+            input "sendCode5", "bool", title: "Send notification when users code is used", defaultValue: false
         }
         section("User 6") {
             input "username6", "text", title: "Name for User", required:false
             input "code6", "text", title: "Code (4 to 8 digits) or X to Delete", required:false
-            input "sendCode6", "enum", title: "Send notification when users code is used", metadata:[values:["Yes","No"]], required:false
+            input "sendCode6", "bool", title: "Send notification when users code is used", defaultValue: false
         }
     }
 }
@@ -136,18 +137,18 @@ def codeUsed(evt) {
                 username = "$it.value"
             }
             if ( it.key == "sendCode${codeData.usedCode}" ) {
-                sendCode = "$it.value"
+                sendCode = !!it.value
             }
         }
         def message = "$evt.displayName was unlocked by $username" // in user slot $codeData.usedCode"
-        if(sendCode == "Yes") {
+        if(sendCode) {
             send(message)
         }
     }
 }
 
 private send(msg) {
-    if (sendPushMessage == "Yes") {
+    if (sendPushMessage) {
         sendPush(msg)
     }
     if (phone) {
