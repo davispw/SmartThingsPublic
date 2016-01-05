@@ -19,7 +19,7 @@
  *      JLH - 01-23-2014 - Update for Correct SmartApp URL Format
  *      JLH - 02-15-2014 - Fuller use of ecobee API
  *      10-28-2015 DVCSMP-604 - accessory sensor, DVCSMP-1174, DVCSMP-1111 - not respond to routines
- *		StrykerSKS - 12-11-2015 - Make it work (better) with the Ecobee 3
+ *	StrykerSKS - 12-11-2015 - Make it work (better) with the Ecobee 3
  *
  */
  
@@ -541,7 +541,7 @@ def pollChildren(child = null) {
             oneChild.generateEvent(atomicState.thermostats[oneChild.device.deviceNetworkId].data)
         } else {
         	// We must have a remote sensor
-            log.debug "pollChildren() - Updating sensor data: ${oneChild.device.deviceNetworkId}"
+            log.debug "pollChildren() - Updating sensor data: ${oneChild.device.deviceNetworkId} data: ${atomicState.remoteSensors[oneChild.device.deviceNetworkId].data}"
             oneChild.generateEvent(atomicState.remoteSensors[oneChild.device.deviceNetworkId].data)
         } 
     }
@@ -638,6 +638,8 @@ private def pollEcobeeAPI(thermostatIdsString = "") {
 				if (resp.status == 500 && resp.data.status.code == 14) {
 					log.debug "Resp.status: ${resp.status} Status Code: ${resp.data.status.code}. Storing the failed action to try later"
 					atomicState.action = "pollChildren";
+                    atomicState.connected = false
+                    generateEventLocalParams()
 					refreshAuthToken()
 				}
 				else {
@@ -645,11 +647,21 @@ private def pollEcobeeAPI(thermostatIdsString = "") {
 				}
 			}
 		}
-	} catch(Exception e) {
-		log.debug "___exception polling children: " + e
+	} catch (groovyx.net.http.HttpResponseException e) {
+    	// HTTP exception
+		log.error "pollEcobeeAPI(): HttpResponseException: ${e}. statuscode: ${e.statusCode}, response? ${e.getResponse()}. "
+        // log.error "pollEcobeeAPI(): HttpResponseException: ${e}. statuscode: ${e.statusCode}, response? ${e.getResponse().getData()} headers ${e.getResponse().getHeaders()}}. "
+		atomicState.connected = false
+        generateEventLocalParams()
+    	// refreshAuthToken() // Last ditch effort to refresh
+    } catch (java.util.concurrent.TimeoutException e) {
+		log.error "pollEcobeeAPI(), TimeoutException: ${e}."
 //        debugEventFromParent(child, "___exception polling children: " + e)
-		refreshAuthToken()
-	}
+		// Likely bad luck and network overload, move on and let it try again
+        
+	} catch (Exception e) {
+    	log.error "pollEcobeeAPI(): General Exception: ${e}."
+    }
     log.debug "<===== Leaving pollEcobeeAPI() results: ${result}"
 	return result
     
@@ -660,7 +672,7 @@ private def pollEcobeeAPI(thermostatIdsString = "") {
 void poll() {
 	// def devices = getChildDevices()
 	// devices.each {pollChild(it)}
-   //  if ( readyForAuthRefresh() ) { refreshAuthToken() }
+   //  TODO: if ( readyForAuthRefresh() ) { refreshAuthToken() } // Use runIn to make this feasible?
     pollChildren(null) // Poll ALL the children at the same time for efficiency
 }
 
@@ -731,8 +743,17 @@ def updateSensorData() {
                             
 				it.capability.each { cap ->
 					if (cap.type == "temperature") {
-						temperature = cap.value as Double
-						temperature = (temperature / 10).toDouble().round(0)
+                    	log.debug "updateSensorData() - Sensor (DNI: ${sensorDNI}) temp is ${cap.value}"
+                        if ( cap.value.isNumber() ) { // Handles the case when the sensor is offline, which would return "unkown"
+							temperature = cap.value as Double
+							temperature = (temperature / 10).toDouble().round(0)
+                        } else if (temperature == "unknown") {
+                        	// TODO: Do something here to mark the sensor as offline?
+                            log.error "updateSensorData() - sensor (DNI: ${sensorDNI}) returned unknown temp value. Perhaps it is unreachable."
+                            
+                        } else {
+                        	 log.error "updateSensorData() - sensor (DNI: ${sensorDNI}) returned ${cap.value}."
+                        }
 					} else if (cap.type == "occupancy") {
 						if(cap.value == "true") {
 							occupancy = "active"
@@ -927,8 +948,10 @@ private refreshAuthToken() {
                     generateEventLocalParams() // Update the connected state at the thermostat devices
                 }
             }
-        } catch(Exception e) {
-            log.error "refreshAuthToken() >> Error: e.statusCode ${e.statusCode}"
+        } catch (groovyx.net.http.HttpResponseException e) {
+            log.error "refreshAuthToken() >> Error: e.statusCode ${e.statusCode}. full exception: ${e} response? data: ${e.getResponse().getData()} headers ${e.getResponse().getHeaders()}}"
+           	atomicState.connected = false
+            generateEventLocalParams() // Update the connected state at the thermostat devices
 			def reAttemptPeriod = 300 // in sec
 			if (e.statusCode != 401) { //this issue might comes from exceed 20sec app execution, connectivity issue etc.
 				runIn(reAttemptPeriod, "refreshAuthToken")
@@ -943,9 +966,17 @@ private refreshAuthToken() {
                     atomicState.connected = false
 				}
             }
+        } catch (java.util.concurrent.TimeoutException e) {
+			log.error "refreshAuthToken(), TimeoutException: ${e}."
+			// Likely bad luck and network overload, move on and let it try again
+            runIn(300, "refreshAuthToken")
+        } catch (Exception e) {
+        	log.error "refreshAuthToken(), General Exception: ${e}."
         }
     }
 }
+
+
 
 def resumeProgram(child, deviceId) {
 
@@ -964,13 +995,13 @@ def setHold(child, heating, cooling, deviceId, sendHoldType) {
 	int h = heating * 10
 	int c = cooling * 10
 
-//    log.debug "setpoints____________ - h: $heating - $h, c: $cooling - $c"
+    log.debug "setHold(): setpoints____________ - h: ${heating} - ${h}, c: ${cooling} - ${c}, setHoldType: ${setHoldType}"
 //    def thermostatIdsString = getChildDeviceIdsString()
 
 	def jsonRequestBody = '{"selection":{"selectionType":"thermostats","selectionMatch":"' + deviceId + '","includeRuntime":true},"functions": [{ "type": "setHold", "params": { "coolHoldTemp": '+c+',"heatHoldTemp": '+h+', "holdType": '+sendHoldType+' } } ]}'
 //	def jsonRequestBody = '{"selection":{"selectionType":"thermostats","selectionMatch":"' + thermostatIdsString + '","includeRuntime":true},"functions": [{"type": "resumeProgram"}, { "type": "setHold", "params": { "coolHoldTemp": '+c+',"heatHoldTemp": '+h+', "holdType": "indefinite" } } ]}'
 	def result = sendJson(child, jsonRequestBody)
-//    debugEventFromParent(child, "setHold: heating: ${h}, cooling: ${c} with result ${result}")
+    debugEventFromParent(child, "setHold: heating: ${h}, cooling: ${c} with result ${result}")
 	return result
 }
 
@@ -1155,8 +1186,9 @@ private Boolean readyForAuthRefresh () {
     log.debug "timeLeft until expiry (in min): ${timeLeft}"
     
     // Since this runs as part of poll() we can be a bit more conservative on the time before renewing the token
-    def pollInterval = settings.pollingInterval ?: 5
-    def ready = timeLeft <= ((pollInterval * 3) + 2)
+    // def pollInterval = settings.pollingInterval ?: 5
+    // def ready = timeLeft <= ((pollInterval * 3) + 2)
+    def ready = timeLeft <= 29
     log.debug "Ready for authRefresh? ${ready}"
     return ready
 }
