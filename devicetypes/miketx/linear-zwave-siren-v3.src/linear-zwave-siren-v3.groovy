@@ -24,6 +24,7 @@ metadata {
         capability "Switch"
         capability "Configuration"
         attribute "mode", "string"
+        attribute "autoStopTime", "string"
         command "setstrobe"
         command "setsiren"
         command "setboth"
@@ -42,12 +43,37 @@ metadata {
         reply "2001FF,delay 3000,200100,2002": "command: 2002, payload: 00"
     }
     tiles(scale: 2) {
-        standardTile("mode", "device.mode", width: 3, height: 3) {
+    	multiAttributeTile(name:"multi", type:"generic", width:6, height:4) {
+    		tileAttribute("device.alarm", key: "PRIMARY_CONTROL") {
+	            attributeState "off", label:'Panic', icon: "st.alarm.alarm.alarm", action:"on", nextState: "alarm", backgroundColor: "#e86d13"
+    	        attributeState "alarm", label:'Alarm!', icon: "st.alarm.alarm.alarm", action:"off", nextState: "off", backgroundColor: "#ff0000"
+        	    attributeState "siren", icon: "st.secondary.siren", action:"off", nextState: "off", backgroundColor: "#ff0000"
+            	attributeState "strobe", icon: "st.secondary.strobe", action:"off", nextState: "off", backgroundColor: "#ff0000"
+    		}
+            tileAttribute("device.mode", key: "SECONDARY_CONTROL") {
+                attributeState "both", label:'Both Siren & Strobe', action:"setsiren", nextState: "siren", icon:"st.alarm.alarm.alarm"
+                attributeState "siren", label:'Siren Only', action:"setstrobe", nextState: "strobe", icon:"st.secondary.siren"
+                attributeState "strobe", label:'Strobe Only', action:"setboth", nextState: "both", icon:"st.secondary.strobe"
+            }
+  		}
+        standardTile("mode", "device.mode", decoration: "flat", width: 3, height: 3) {
             state "both", label:'Alarm', action:"setsiren", nextState: "siren", icon:"st.alarm.alarm.alarm"
-            state "siren", action:"setstrobe", nextState: "siren", icon:"st.secondary.siren"
+            state "siren", action:"setstrobe", nextState: "strobe", icon:"st.secondary.siren"
             state "strobe", action:"setboth", nextState: "both", icon:"st.secondary.strobe"
         }
-        standardTile("panic", "device.alarm", width: 3, height: 3) {
+        standardTile("mode1", "device.mode", decoration: "flat", width: 2, height: 2) {
+            state "default", label:'Alarm', action:"setboth", nextState: "both", icon:"st.alarm.alarm.alarm"
+            state "both", label:'Alarm', action:"setboth", icon:"st.alarm.alarm.alarm", backgroundColor: "#53a7c0"
+        }
+        standardTile("mode2", "device.mode", decoration: "flat", width: 2, height: 2) {
+            state "default", action:"setsiren", nextState: "siren", icon:"st.secondary.siren"
+            state "siren", action:"setsiren", icon:"st.secondary.siren", backgroundColor: "#53a7c0"
+        }
+        standardTile("mode3", "device.mode", decoration: "flat", width: 2, height: 2) {
+            state "default", action:"setstrobe", nextState: "strobe", icon:"st.secondary.strobe"
+            state "strobe", action:"setstrobe", icon:"st.secondary.strobe", backgroundColor: "#53a7c0"
+        }
+        standardTile("panic", "device.alarm", width: 6, height: 4) {
             state "off", label:'Panic', icon: "st.alarm.alarm.alarm", action:"on", nextState: "alarm", backgroundColor: "#e86d13"
             state "alarm", label:'Alarm!', icon: "st.alarm.alarm.alarm", action:"off", nextState: "off", backgroundColor: "#ff0000"
             state "siren", label:'Alarm!', icon: "st.secondary.siren", action:"off", nextState: "off", backgroundColor: "#ff0000"
@@ -64,33 +90,47 @@ metadata {
         }
 
         main "panic"
-        details(["mode","panic","battery","refresh", "configure"])
+        details(["multi","mode1","mode2","mode3","battery","refresh", "configure"])
     }
 
     preferences {
-        input "autoStopTime", "enum", title: "Disarm Time",required:true,displayDuringSetup:true, options: ["30","60","120","Infinite"],default:'30'
+        input "autoStopTime", "enum",
+        	title: "Disarm Time",
+            required: true,
+        	displayDuringSetup: true,
+            options: ["30","60","120","Infinite"],
+            defaultValue: '30'
     }
 }
 
 def setstrobe() {
     log.debug "Setting alarm to strobe."
-    state.LastAlarmtype = 2
-    sendEvent(name: "mode", value: "strobe", descriptionText: "Mode is Strobe Only")
-    zwave.configurationV1.configurationSet(parameterNumber: 0, size: 1, configurationValue: [2]).format()
+//    state.LastAlarmtype = 2
+//    sendEvent(name: "mode", value: "strobe", descriptionText: "Mode is Strobe Only")
+    delayBetween([
+    	zwave.configurationV1.configurationSet(parameterNumber: 0, size: 1, configurationValue: [2]).format(),
+    	zwave.configurationV1.configurationGet(parameterNumber: 0).format()
+    ])
 }
 
 def setsiren() {
     log.debug "Setting alarm to siren."
-    state.LastAlarmtype = 1
-    sendEvent(name: "mode", value: "siren", descriptionText: "Mode is Siren Only")
-    zwave.configurationV1.configurationSet(parameterNumber: 0, size: 1, configurationValue: [1]).format()
+//    state.LastAlarmtype = 1
+//    sendEvent(name: "mode", value: "siren", descriptionText: "Mode is Siren Only")
+    delayBetween([
+	    zwave.configurationV1.configurationSet(parameterNumber: 0, size: 1, configurationValue: [1]).format(),
+    	zwave.configurationV1.configurationGet(parameterNumber: 0).format()
+    ])
 }
 
 def setboth() {
     log.debug "Setting alarm to both."
-    state.LastAlarmtype = 0
-    sendEvent(name: "mode", value: "both", descriptionText: "Mode is both Siren & Strobe")
-    zwave.configurationV1.configurationSet(parameterNumber: 0, size: 1, configurationValue: [0]).format()
+//    state.LastAlarmtype = 0
+//    sendEvent(name: "mode", value: "both", descriptionText: "Mode is both Siren & Strobe")
+    delayBetween([
+		zwave.configurationV1.configurationSet(parameterNumber: 0, size: 1, configurationValue: [0]).format(),
+    	zwave.configurationV1.configurationGet(parameterNumber: 0).format()
+    ])
 }
 
 def off() {
@@ -102,19 +142,27 @@ def off() {
 }
 
 def on() {
-	log.debug "sending on"
-    delayBetween([
+	def currentAutoStopTime = Integer.valueOf(device.currentValue('autoStopTime') ?: '0')
+	log.debug "sending on. Will refresh after ${currentAutoStopTime} + 5s"
+    def cmd = delayBetween([
         zwave.basicV1.basicSet(value: 0xff).format(),
         zwave.basicV1.basicGet().format()
     ], 200)
+    if (currentAutoStopTime && currentAutoStopTime != 'Infinity') {
+        return delayBetween([
+    		cmd, zwave.basicV1.basicGet().format()
+        ], currentAutoStopTime * 1000 + 5000)
+    } else {
+    	return cmd
+	}
 }
 
 def both() {
 	log.debug "sending alarm on via both"
-    delayBetween([
-        zwave.basicV1.basicSet(value: 0xff).format(),
-        zwave.basicV1.basicGet().format()
-    ], 200)
+    // Linear WA105DBZ-1 is not like other alarms that can activate siren vs. strobe on demand.
+    // SmartThings Smart Home Automation app always calls both() method, 
+    // so just delegate to on() with pre-configured mode
+    on()
 }
 
 def parse(String description) {
@@ -129,16 +177,18 @@ def parse(String description) {
 }
 
 def createEvents(physicalgraph.zwave.commands.basicv1.BasicReport cmd) {
-    log.debug "createEvents with cmd value {$cmd.value}, LastAlarmtype: $state.LastAlarmtype"
+	def currentMode = device.currentValue('mode') ?: 'alarm'
+    log.debug "createEvents with cmd value {$cmd.value}, currentMode: $currentMode"
     def alarmValue = "off"
     if (cmd.value) {
-        if (state.LastAlarmtype == 2) {
-            alarmValue = "strobe"
-        } else if (state.LastAlarmtype == 1) {
-            alarmValue = "siren"
-        } else {
-            alarmValue = "both"
-		}
+//        if (state.LastAlarmtype == 2) {
+//            alarmValue = "strobe"
+//        } else if (state.LastAlarmtype == 1) {
+//            alarmValue = "siren"
+//        } else {
+//            alarmValue = "both"
+//		}
+		alarmValue = currentMode
     }
 
 	def switchValue = cmd.value ? "on" : "off"
@@ -150,83 +200,131 @@ def createEvents(physicalgraph.zwave.commands.basicv1.BasicReport cmd) {
         createEvent(name: "switch", value: switchValue, descriptionText: descriptionText, displayed: false)
     ]
 }
+
 def createEvents(physicalgraph.zwave.Command cmd) {
-log.warn "UNEXPECTED COMMAND: $cmd"
+	log.warn "UNEXPECTED COMMAND: $cmd"
 }
-def zwaveEvent(physicalgraph.zwave.commands.wakeupv1.WakeUpNotification cmd)
-{
-def result = [createEvent(descriptionText: "${device.displayName} woke up", isStateChange: false)]
-if (!state.lastbat || (new Date().time) - state.lastbat > 53*60*60*1000) {
-result << response(zwave.batteryV1.batteryGet())
-result << response("delay 1200")
+
+def zwaveEvent(physicalgraph.zwave.commands.wakeupv1.WakeUpNotification cmd) {
+    def result = [createEvent(descriptionText: "${device.displayName} woke up", isStateChange: false)]
+    if (!state.lastbat || (new Date().time) - state.lastbat > 53*60*60*1000) {
+        result << response(zwave.batteryV1.batteryGet())
+        result << response("delay 1200")
+    }
+    result << response(zwave.wakeUpV1.wakeUpNoMoreInformation())
+    result
 }
-result << response(zwave.wakeUpV1.wakeUpNoMoreInformation())
-result
-}
+
 def createEvents(physicalgraph.zwave.commands.batteryv1.BatteryReport cmd) {
-def map = [ name: "battery", unit: "%" ]
-if (cmd.batteryLevel == 0xFF) {
-map.value = 1
-map.descriptionText = "$device.displayName has a low battery"
-map.isStateChange = true
-} else {
-map.value = cmd.batteryLevel
+    def map = [ name: "battery", unit: "%" ]
+    if (cmd.batteryLevel == 0xFF) {
+        map.value = 1
+        map.descriptionText = "$device.displayName has a low battery"
+        map.isStateChange = true
+    } else {
+        map.value = cmd.batteryLevel
+    }
+    state.lastbatt = new Date().time
+    [createEvent(map), response(zwave.wakeUpV1.wakeUpNoMoreInformation())]
 }
-state.lastbatt = new Date().time
-[createEvent(map), response(zwave.wakeUpV1.wakeUpNoMoreInformation())]
+
+def createEvents(physicalgraph.zwave.commands.configurationv2.ConfigurationReport cmd) {
+	switch (cmd.parameterNumber) {
+    case 0:
+    	log.debug "Got mode configuration: ${cmd.configurationValue}"
+        switch (cmd.configurationValue[0]) {
+        case 1:
+            return [createEvent(name: "mode", value: "siren", descriptionText: "Set to Siren Only")]
+        case 2:
+            return [createEvent(name: "mode", value: "strobe", descriptionText: "Set to Strobe Only")]
+        case 0:
+        default:
+            return [createEvent(name: "mode", value: "both", descriptionText: "Set to both Siren & Strobe")]
+		}
+    case 1:
+    	log.debug "Got autoStopTime configuration: ${cmd.configurationValue}"
+        switch (cmd.configurationValue[0]) {
+        case 1:
+            return [createEvent(name: "autoStopTime", value: "60", descriptionText: "Set to turn off after 60 seconds")]
+        case 2:
+            return [createEvent(name: "autoStopTime", value: "120", descriptionText: "Set to turn off after 120 seconds")]
+        case 3:
+            return [createEvent(name: "autoStopTime", value: "Infinite", descriptionText: "Set to never turn off automatically: must disarm siren manually!")]
+        case 0:
+        default:
+        	return [createEvent(name: "autoStopTime", value: "30", descriptionText: "Set to turn off after 30 seconds")]
+		}
+    }
+    log.warn "Unexpected configuration: $cmd"
 }
-def createEvents(physicalgraph.zwave.commands.configurationv1.ConfigurationReport cmd)
-{
-log.debug "CONFIGURATIONREPORT"
-}
+
 def poll() {
-log.debug "checking battery... last checked ${state.lastbatt}"
-if (secondsPast(state.lastbatt, 36*60*60)) {
-return zwave.batteryV1.batteryGet().format()
-} else {
-return null
+    log.debug "checking battery... last checked ${state.lastbatt}"
+    if (secondsPast(state.lastbatt, 36*60*60)) {
+    	return zwave.batteryV1.batteryGet().format()
+    } else {
+    	return null
+    }
 }
-}
+
 private Boolean secondsPast(timestamp, seconds) {
-if (!(timestamp instanceof Number)) {
-if (timestamp instanceof Date) {
-timestamp = timestamp.time
-} else if ((timestamp instanceof String) && timestamp.isNumber()) {
-timestamp = timestamp.toLong()
-} else {
-return true
-}
-}
-return (new Date().time - timestamp) > (seconds * 1000)
+    if (!(timestamp instanceof Number)) {
+        if (timestamp instanceof Date) {
+        	timestamp = timestamp.time
+        } else if ((timestamp instanceof String) && timestamp.isNumber()) {
+        	timestamp = timestamp.toLong()
+        } else {
+        	return true
+        }
+    }
+    return (new Date().time - timestamp) > (seconds * 1000)
 }
 
 def refresh() {
-    log.debug "sending battery refresh command"
+    log.debug "sending refresh commands"
     delayBetween([
         zwave.basicV1.basicGet().format(),
+        zwave.configurationV1.configurationGet(parameterNumber: 0).format(),
+        zwave.configurationV1.configurationGet(parameterNumber: 1).format(),
         zwave.batteryV1.batteryGet().format()
     ], 2000)
 }
 
 def configure() {
-    def autoStopTimeParameter = 0
-    switch (autoStopTime) {
-    case '30': default:
-        autoStopTimeParameter = 0
-        break
+    def autoStopTimeParameter
+    if (autoStopTime == '30') {
+    	log.info "XXX 30"
+    } else if (autoStopTime == '60') {
+    	log.info "XXX 60"
+    } else if (autoStopTime == '60') {
+    	log.info "XXX 60"
+    } else {
+    	log.info "ZZZ $autoStopTime"
+    }
+
+
+    switch (settings.autoStopTime) {
     case '60':
     	autoStopTimeParameter = 1
+    	log.info "CASE 60 -> $autoStopTimeParameter"
         break
     case '120':
         autoStopTimeParameter = 2
+    	log.info "CASE 120 -> $autoStopTimeParameter"
         break
     case 'Infinite':
     	autoStopTimeParameter = 3
+    	log.info "CASE Infinite -> $autoStopTimeParameter"
+        break
+    case '30':
+    default:
+        autoStopTimeParameter = 0
+    	log.info "CASE 30 -> $autoStopTimeParameter"
         break
     }
-    log.debug "AutoStopTime - ${autoStopTimeParameter}"
-    delayBetween([
-        zwave.associationV2.associationSet(groupingIdentifier:1, nodeId:zwaveHubNodeId).format(),
-    	zwave.configurationV1.configurationSet(parameterNumber: 1, size: 1, configurationValue: [autoStopTimeParameter]).format()
+    log.debug "autoStopTime: $settings.autoStopTime, autoStopTimeParameter: $autoStopTimeParameter"
+    delayBetween ([
+    	zwave.configurationV1.configurationSet(parameterNumber: 1, size: 1, configurationValue: [autoStopTimeParameter]).format(),
+    	zwave.configurationV1.configurationGet(parameterNumber: 1).format()
     ], 1000)
 }
