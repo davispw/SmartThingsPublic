@@ -392,8 +392,13 @@ metadata {
 		standardTile("upButtonControl", "device.thermostatSetpoint", width: 2, height: 1, inactiveLabel: false, decoration: "flat") {
 			state "setpoint", action:"raiseSetpoint", icon:"st.thermostat.thermostat-up"
 		}
+<<<<<<< HEAD
 		valueTile("thermostatSetpoint", "device.thermostatSetpoint", width: 2, height: 2, decoration: "flat") {
 			state "thermostatSetpoint", label:'${currentValue}°'
+=======
+		valueTile("thermostatSetpoint", "device.thermostatSetpoint", width: 1, height: 1, decoration: "flat") {
+			state "thermostatSetpoint", label:'${currentValue}'
+>>>>>>> SmartThingsCommunity/master
 		}
 		valueTile("currentStatus", "device.thermostatStatus", height: 2, width: 4, decoration: "flat") {
 			state "thermostatStatus", label:'${currentValue}', backgroundColor:"#ffffff"
