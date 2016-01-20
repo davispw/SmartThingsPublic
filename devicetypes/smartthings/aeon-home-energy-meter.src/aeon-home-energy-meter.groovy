@@ -80,7 +80,8 @@ def zwaveEvent(physicalgraph.zwave.commands.meterv1.MeterReport cmd) {
 		[name: "energy", value: cmd.scaledMeterValue, unit: "kVAh"]
 	}
 	else {
-		[name: "power", value: Math.round(cmd.scaledMeterValue), unit: "W"]
+    	log.info "power: ${Math.round(cmd.scaledMeterValue)} W"
+		[name: "power", value: Math.round(cmd.scaledMeterValue), unit: "W", displayed: false]
 	}
 }
 
@@ -91,8 +92,8 @@ def zwaveEvent(physicalgraph.zwave.Command cmd) {
 
 def refresh() {
 	delayBetween([
-		zwave.meterV2.meterGet(scale: 0).format(),
-		zwave.meterV2.meterGet(scale: 2).format()
+		zwave.meterV2.meterGet(scale: 2).format(),
+		zwave.meterV2.meterGet(scale: 0).format()
 	])
 }
 
@@ -107,9 +108,9 @@ def reset() {
 def configure() {
 	def cmd = delayBetween([
 		zwave.configurationV1.configurationSet(parameterNumber: 101, size: 4, scaledConfigurationValue: 4).format(),   // combined power in watts
-		zwave.configurationV1.configurationSet(parameterNumber: 111, size: 4, scaledConfigurationValue: 300).format(), // every 5 min
+		zwave.configurationV1.configurationSet(parameterNumber: 111, size: 4, scaledConfigurationValue: 30).format(), // every 30 sec
 		zwave.configurationV1.configurationSet(parameterNumber: 102, size: 4, scaledConfigurationValue: 8).format(),   // combined energy in kWh
-		zwave.configurationV1.configurationSet(parameterNumber: 112, size: 4, scaledConfigurationValue: 300).format(), // every 5 min
+		zwave.configurationV1.configurationSet(parameterNumber: 112, size: 4, scaledConfigurationValue: 60*60).format(), // every 60 min
 		zwave.configurationV1.configurationSet(parameterNumber: 103, size: 4, scaledConfigurationValue: 0).format(),    // no third report
 		zwave.configurationV1.configurationSet(parameterNumber: 113, size: 4, scaledConfigurationValue: 300).format() // every 5 min
 	])
