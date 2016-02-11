@@ -24,8 +24,8 @@
  *  See Changelog for change history
  *
  */  
-def getVersionNum() { return "0.9.0" }
-private def getVersionLabel() { return "ecobee (Connect) Version ${getVersionNum()}-RC6" }
+def getVersionNum() { return "0.9.5" }
+private def getVersionLabel() { return "ecobee (Connect) Version ${getVersionNum()}-RC7" }
 private def getHelperSmartApps() {
 	return [ 
     		[name: "ecobeeRoutinesChild", appName: "ecobee Routines",  
@@ -611,6 +611,13 @@ Map getEcobeeSensors() {
 				def key = "ecobee_sensor_thermostat-"+ it?.id + "-" + it?.name
                 LOG("Adding a Thermostat as a Sensor: ${it}, key: ${key}  value: ${value}", 4, null, "trace")
 				sensorMap["${key}"] = value + " (Thermostat)"
+            } else if ( it.type == "control_sensor" && it.capability[0]?.type == "temperature") {
+            	// We can add this one as it supports temperature
+                LOG("Adding a control_sensor: ${it}", 4, null, "trace")
+				def value = "${it?.name}"
+				def key = "control_sensor-"+ it?.id
+				sensorMap["${key}"] = value
+            
             } else {
             	LOG("Did NOT add: ${it}. settings.showThermsAsSensor=${settings.showThermsAsSensor}", 4, null, "trace")
             }
@@ -670,6 +677,11 @@ def initialize() {
     state.lastScheduledWatchdogDate = nowDate
 	state.lastPoll = nowTime
     state.lastPollDate = nowDate
+    state.timeOfDay = "night" 
+    
+    def sunriseAndSunset = getSunriseAndSunset()
+    state.sunriseTime = sunriseAndSunset.sunrise.format("HHmm", location.timeZone).toDouble()
+    state.sunsetTime = sunriseAndSunset.sunset.format("HHmm", location.timeZone).toDouble()
 	    
     // Setup initial polling and determine polling intervals
 	state.pollingInterval = getPollingInterval()
@@ -697,8 +709,8 @@ def initialize() {
 
     // Add subscriptions as little "daemons" that will check on our health
     subscribe(location, "routineExecuted", scheduleWatchdog)
-    subscribe(location, "sunset", scheduleWatchdog)
-    subscribe(location, "sunrise", scheduleWatchdog)
+    subscribe(location, "sunset", sunsetEvent)
+    subscribe(location, "sunrise", sunriseEvent)
     
     // Schedule the various handlers
     if (settings.thermostats?.size() > 0) { spawnDaemon("poll") } 
@@ -793,6 +805,25 @@ private def deleteUnusedChildren() {
     }    
 }
 	
+
+def sunriseEvent(evt) {
+	LOG("sunriseEvent() - with evt (${evt})", 4, null, "info")
+	state.timeOfDay = "day"
+    state.lastSunriseEvent = now()
+    state.lastSunriseEventDate = getTimestamp()
+    state.sunriseTime = new Date().format("HHmm", location.timeZone).toInteger()
+    scheduleWatchdog(evt, false)
+    
+}
+
+def sunsetEvent(evt) {
+	LOG("sunsetEvent() - with evt (${evt})", 4, null, "info")
+	state.timeOfDay = "night"
+    state.lastSunsetEvent = now()
+    state.lastSunsetEventDate = getTimestamp()
+    state.sunsetTime = new Date().format("HHmm", location.timeZone).toInteger()
+    scheduleWatchdog(evt, false)
+}
 
 def scheduleWatchdog(evt=null, local=false) {
 	def results = true
@@ -1007,7 +1038,7 @@ def pollInit() {
 def pollChildren(child = null) {
 	def results = true
     
-	LOG("=====> pollChildren()", 4)
+	LOG("=====> pollChildren() - state.forcePoll(${state.forcePoll})  state.lastPoll(${state.lastPoll})  now(${now()})  state.lastPollDate(${state.lastPollDate})", 4, child, "trace")
     
 	if(apiConnected() == "lost") {
     	// Possibly a false alarm? Check if we can update the token with one last fleeting try...
@@ -1124,7 +1155,7 @@ private def pollEcobeeAPI(thermostatIdsString = "") {
 					apiRestored()
                     generateEventLocalParams() // Update the connection status
                 }
-                state.lastPoll = now();
+                updateLastPoll()
 				LOG("httpGet: updated ${state.thermostats?.size()} stats: ${state.thermostats}")
 			} else {
 				LOG("pollEcobeeAPI() - polling children & got http status ${resp.status}", 1, null, "error")
@@ -1148,9 +1179,13 @@ private def pollEcobeeAPI(thermostatIdsString = "") {
 		def reAttemptPeriod = 45 // in sec
 		if ( (e.statusCode == 500 && e.getResponse()?.data.status.code == 14) ||  (e.statusCode == 401 && e.getResponse()?.data.status.code == 14) ) {
         	// Not possible to recover from status.code == 14
-            // if ( refreshAuthToken() ) { LOG("We have recovered the token a from the code 14.", 2, null, "warn") }
             LOG("In HttpResponseException: Received data.stat.code of 14", 1, null, "error")
-        	apiLost("pollEcobeeAPI() - In HttpResponseException: Received data.stat.code of 14")
+            if ( refreshAuthToken() ) { 
+            	LOG("We have recovered the token a from the code 14.", 2, null, "warn") } 
+			else { 
+            	LOT("Unable to recover from error even after refreshAuthToken called", 2, null, "warn")             
+        		apiLost("pollEcobeeAPI() - In HttpResponseException: Received data.stat.code of 14") 
+			}
 		} else if (e.statusCode != 401) { //this issue might comes from exceed 20sec app execution, connectivity issue etc.
         	LOG("In HttpResponseException - statusCode != 401 (${e.statusCode})", 1, null, "warn")
             state.connected = "warn"
@@ -1197,10 +1232,8 @@ def poll() {
         	LOG("poll() - we were unable to recover the connection.", 2, null, "error")
             return false
         }
-    }
-    
-	state.lastPoll = now()
-	state.lastPollDate = getTimestamp()
+    }    
+	
 	LOG("poll() - Polling children with pollChildren(null)", 4)
 	return pollChildren(null) // Poll ALL the children at the same time for efficiency    
 }
@@ -1263,12 +1296,15 @@ def updateSensorData() {
                 
 	state.remoteSensors.each {
 		it.each {
-			if ( ( it.type == "ecobee3_remote_sensor" ) || ((it.type == "thermostat") && (settings.showThermsAsSensor)) ) {
+			if ( ( it.type == "ecobee3_remote_sensor" ) || (it.type == "control_sensor") || ((it.type == "thermostat") && (settings.showThermsAsSensor)) ) {
 				// Add this sensor to the list
 				def sensorDNI 
                 if (it.type == "ecobee3_remote_sensor") { 
                 	sensorDNI = "ecobee_sensor-" + it?.id + "-" + it?.code 
-				} else { 
+				} else if (it.type == "control_sensor") {
+                	LOG("We have a Smart SI style control_sensor! it=${it}", 4, null, "trace")
+                    sensorDNI = "control_sensor-" + it?.id 
+                } else { 
                 	LOG("We have a Thermostat based Sensor! it=${it}", 4, null, "trace")
                 	sensorDNI = "ecobee_sensor_thermostat-"+ it?.id + "-" + it?.name
 				}
@@ -1307,14 +1343,17 @@ def updateSensorData() {
 				}
                                             				
 				def sensorData = [
-					temperature: ((temperature == "unknown") ? "unknown" : myConvertTemperatureIfNeeded(temperature, "F", 1)),
-					motion: occupancy
+					temperature: ((temperature == "unknown") ? "unknown" : myConvertTemperatureIfNeeded(temperature, "F", 1))					
 				]
+                if (occupancy != "") {
+                	sensorData << [ motion: occupancy ]
+                }
 				sensorCollector[sensorDNI] = [data:sensorData]
                 LOG("sensorCollector being updated with sensorData: ${sensorData}", 4)
                 
 			} else if ( (it.type == "thermostat") && (settings.showThermsAsSensor) ) { 
-            	// Also update the thermostat based Remote Sensor
+            	// Also update the thermostat based Remote Sensor??
+                // Don't think this is needed as we incorporated it directly in the if above
                 
             
             } // end thermostat else if
@@ -1326,6 +1365,8 @@ def updateSensorData() {
 }
 
 def updateThermostatData() {
+	state.timeOfDay = getTimeOfDay()
+	
 	// Create the list of thermostats and related data
 	state.thermostats = state.thermostatData.thermostatList.inject([:]) { collector, stat ->
 		def dni = [ app.id, stat.identifier ].join('.')
@@ -1337,14 +1378,20 @@ def updateThermostatData() {
         
         // TODO: Put a wrapper here based on the thermostat brand
         def thermSensor = stat.remoteSensors.find { it.type == "thermostat" }
-        LOG("updateThermostatData() - thermSensor == ${thermSensor}" )
+        def occupancy = "not supported"
+        if(!thermSensor) {
+		LOG("This particular thermostat does not have a built in remote sensor", 4)
+		state.hasInternalSensors = false
+        } else {
+        	state.hasInternalSensors = true
+		LOG("updateThermostatData() - thermSensor == ${thermSensor}" )
         
-        def occupancyCap = thermSensor?.capability.find { it.type == "occupancy" }
-        LOG("updateThermostatData() - occupancyCap = ${occupancyCap} value = ${occupancyCap.value}")
+		def occupancyCap = thermSensor?.capability.find { it.type == "occupancy" }
+		LOG("updateThermostatData() - occupancyCap = ${occupancyCap} value = ${occupancyCap.value}")
         
-        // Check to see if there is even a value, not all types have a sensor
-        def occupancy =  occupancyCap.value ?: "not support"
-        
+		// Check to see if there is even a value, not all types have a sensor
+		occupancy =  occupancyCap.value ?: "not supported"
+        }
         LOG("Program data: ${stat.program}  Current climate (ref): ${stat.program?.currentClimateRef}", 4)
         
         // Determine if an Event is running, find the first running event
@@ -1402,32 +1449,34 @@ def updateThermostatData() {
         	currentFanMode = stat.runtime.desiredFanMode
         }
      
-
-		def data = [ 
-			temperatureScale: getTemperatureScale(),
-			apiConnected: apiConnected(),
-			coolMode: (stat.settings.coolStages > 0),
-			heatMode: (stat.settings.heatStages > 0),
-			autoMode: stat.settings.autoHeatCoolFeatureEnabled,
-            currentProgramName: currentClimateName,
-            currentProgramId: currentClimateId,
-			auxHeatMode: (stat.settings.hasHeatPump) && (stat.settings.hasForcedAir || stat.settings.hasElectric || stat.settings.hasBoiler),
-			temperature: usingMetric ? tempTemperature : tempTemperature.toInteger(),
-			heatingSetpoint: usingMetric ? tempHeatingSetpoint : tempHeatingSetpoint.toInteger(),
-			coolingSetpoint: usingMetric ? tempCoolingSetpoint : tempCoolingSetpoint.toInteger(),
-			thermostatMode: stat.settings.hvacMode,
-            thermostatFanMode: currentFanMode,
-			humidity: stat.runtime.actualHumidity,
-            motion: (occupancy == "true") ? "active" : "inactive",
-			thermostatOperatingState: getThermostatOperatingState(stat),
-			weatherSymbol: stat.weather.forecasts[0].weatherSymbol.toString(),
-			weatherTemperature: usingMetric ? tempWeatherTemperature : tempWeatherTemperature.toInteger()
-		]
         
+	if (state.hasInternalSensors) { occupancy = (occupancy == "true") ? "active" : "inactive" }
+
+	def data = [ 
+		temperatureScale: getTemperatureScale(),
+		apiConnected: apiConnected(),
+		coolMode: (stat.settings.coolStages > 0),
+		heatMode: (stat.settings.heatStages > 0),
+		autoMode: stat.settings.autoHeatCoolFeatureEnabled,
+		currentProgramName: currentClimateName,
+		currentProgramId: currentClimateId,
+		auxHeatMode: (stat.settings.hasHeatPump) && (stat.settings.hasForcedAir || stat.settings.hasElectric || stat.settings.hasBoiler),
+		temperature: usingMetric ? tempTemperature : tempTemperature.toInteger(),
+		heatingSetpoint: usingMetric ? tempHeatingSetpoint : tempHeatingSetpoint.toInteger(),
+		coolingSetpoint: usingMetric ? tempCoolingSetpoint : tempCoolingSetpoint.toInteger(),
+		thermostatMode: stat.settings.hvacMode,
+		thermostatFanMode: currentFanMode,
+		humidity: stat.runtime.actualHumidity,
+		motion: occupancy,
+		thermostatOperatingState: getThermostatOperatingState(stat),
+		weatherSymbol: stat.weather.forecasts[0].weatherSymbol.toString(),
+		weatherTemperature: usingMetric ? tempWeatherTemperature : tempWeatherTemperature.toInteger()
+	]
+       
 		data["temperature"] = data["temperature"] ? ( wantMetric() ? data["temperature"].toDouble() : data["temperature"].toDouble().toInteger() ) : data["temperature"]
 		data["heatingSetpoint"] = data["heatingSetpoint"] ? ( wantMetric() ? data["heatingSetpoint"].toDouble() : data["heatingSetpoint"].toDouble().toInteger() ) : data["heatingSetpoint"]
 		data["coolingSetpoint"] = data["coolingSetpoint"] ? ( wantMetric() ? data["coolingSetpoint"].toDouble() : data["coolingSetpoint"].toDouble().toInteger() ) : data["coolingSetpoint"]
-        data["weatherTemperature"] = data["weatherTemperature"] ? ( wantMetric() ? data["weatherTemperature"].toDouble() : data["weatherTemperature"].toDouble().toInteger() ) : data["weatherTemperature"]
+		data["weatherTemperature"] = data["weatherTemperature"] ? ( wantMetric() ? data["weatherTemperature"].toDouble() : data["weatherTemperature"].toDouble().toInteger() ) : data["weatherTemperature"]
         
 		
 		LOG("Event Data = ${data}", 4)
@@ -1834,7 +1883,10 @@ private def LOG(message, level=3, child=null, logType="debug", event=false, disp
         logType = "debug"
     }
     
-    if ( logType == "error" ) { state.lastLOGerror = message }
+    if ( logType == "error" ) { 
+    	state.lastLOGerror = message 
+        state.LastLOGerrorDate = getTimestamp()
+	}
 	if ( settings.debugLevel?.toInteger() == 5 ) { prefix = "LOG: " }
 	if ( debugLevel(level) ) { 
     	log."${logType}" "${prefix}${message}"
@@ -1951,6 +2003,15 @@ private def String getTimestamp() {
 	return new Date().format("yyyy-MM-dd HH:mm:ss z", location.timeZone)
 }
 
+private def getTimeOfDay() {
+	def nowTime = new Date().format("HHmm", location.timeZone).toDouble()
+    LOG("getTimeOfDay() - nowTime = ${nowTime}", 4, null, "trace")
+    if ( (nowTime < state.sunriseTime) || (nowTime > state.sunsetTime) ) {
+    	return "night"
+    } else {
+    	return "day"
+    }
+}
 
 // Are we connected with the Ecobee service?
 private String apiConnected() {
@@ -1971,12 +2032,12 @@ private def getDebugDump() {
 				lastPollDate:"${state.lastPollDate}", lastScheduledPollDate:"${state.lastScheduledPollDate}", 
 				lastScheduledTokenRefreshDate:"${state.lastScheduledTokenRefreshDate}", lastScheduledWatchdogDate:"${state.lastScheduledWatchdogDate}",
 				lastTokenRefreshDate:"${state.lastTokenRefreshDate}", initializedEpic:"${state.initializedEpic}", initializedDate:"${state.initializedDate}",
-                lastLOGerror:"${state.lastLOGerror}"
+                lastLOGerror:"${state.lastLOGerror}", authTokenExpires:"${state.authTokenExpires}"
 			]    
 	return debugParams
 }
 
-private def apiLost(where = "not specified") {
+private def apiLost(where = "[where not specified]") {
     LOG("apiLost() - ${where}: Lost connection with APIs. unscheduling Polling and refreshAuthToken. User MUST reintialize the connection with Ecobee by running the SmartApp and logging in again", 1, null, "error")
     // TODO: Add a state.apiLostDump variable and populate it with useful troubleshooting information to make it easier to grab everything in one place. Then also add this to the Debug Dashboard
     state.apiLostDump = getDebugDump()
