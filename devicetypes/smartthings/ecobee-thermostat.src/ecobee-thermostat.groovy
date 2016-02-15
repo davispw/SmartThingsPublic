@@ -24,8 +24,8 @@
  *
  */
 
-def getVersionNum() { return "0.9.5" }
-private def getVersionLabel() { return "Ecobee Thermostat Version ${getVersionNum()}-RC7" }
+def getVersionNum() { return "0.9.6" }
+private def getVersionLabel() { return "Ecobee Thermostat Version ${getVersionNum()}" }
 
  
 metadata {
@@ -64,7 +64,7 @@ metadata {
 		attribute "thermostatSetpoint","number"
 		attribute "thermostatStatus","string"
         attribute "apiConnected","string"
-        attribute "averagedTemperature","number"
+        
 		attribute "currentProgram","string"
         attribute "currentProgramId","string"		
         attribute "weatherSymbol", "string"        
@@ -77,6 +77,38 @@ metadata {
 
     	tiles(scale: 2) {      
               
+
+multiAttributeTile(name:"thermostatMulti", type:"thermostat", width:6, height:4, canChangeIcon: true, icon: "st.Home.home1") {
+  tileAttribute("device.temperature", key: "PRIMARY_CONTROL") {
+    attributeState("temperature", label:'${currentValue}°', unit:"F")
+  }
+  /*
+  tileAttribute("device.temperature", key: "VALUE_CONTROL") {
+    attributeState("default", action: "setTemperature")
+  }
+  tileAttribute("device.humidity", key: "SECONDARY_CONTROL") {
+    attributeState("default", label:'${currentValue}%', unit:"%")
+  }
+  tileAttribute("device.thermostatOperatingState", key: "OPERATING_STATE") {
+    attributeState("idle", backgroundColor:"#44b621")
+    attributeState("heating", backgroundColor:"#ffa81e")
+    attributeState("cooling", backgroundColor:"#269bd2")
+  }
+  tileAttribute("device.thermostatMode", key: "THERMOSTAT_MODE") {
+    attributeState("off", label:'${name}')
+    attributeState("heat", label:'${name}')
+    attributeState("cool", label:'${name}')
+    attributeState("auto", label:'${name}')
+  }
+  tileAttribute("device.heatingSetpoint", key: "HEATING_SETPOINT") {
+    attributeState("default", label:'${currentValue}', unit:"dF")
+  }
+  tileAttribute("device.coolingSetpoint", key: "COOLING_SETPOINT") {
+    attributeState("default", label:'${currentValue}', unit:"dF")
+  }
+  */
+}
+
 		multiAttributeTile(name:"tempSummary", type:"thermostat", width:6, height:4) {
 			tileAttribute("device.temperature", key: "PRIMARY_CONTROL") {
 				attributeState("default", label:'${currentValue}', unit:"dF")
@@ -179,28 +211,28 @@ metadata {
         
         // TODO Use a different color for the one that is active
 		standardTile("setModeHeat", "device.thermostatMode", width: 2, height: 2, inactiveLabel: false, decoration: "flat") {			
-			state "heat", action:"thermostat.heat",  label: "Set Heat", nextState: "updating", icon: "https://raw.githubusercontent.com/StrykerSKS/SmartThings/master/smartapp-icons/ecobee/png/systemmode_heat.png"
+			state "heat", action:"thermostat.heat",  label: "Heat", nextState: "updating", icon: "https://raw.githubusercontent.com/StrykerSKS/SmartThings/master/smartapp-icons/ecobee/png/systemmode_heat.png"
 			state "updating", label:"Working...", icon: "st.secondary.secondary"
 		}
 
 		standardTile("setModeCool", "device.thermostatMode", width: 2, height: 2, inactiveLabel: false, decoration: "flat") {			
-			state "cool", action:"thermostat.cool",  label: "Set Cool", nextState: "updating", icon: "https://raw.githubusercontent.com/StrykerSKS/SmartThings/master/smartapp-icons/ecobee/png/systemmode_cool.png"
+			state "cool", action:"thermostat.cool",  label: "Cool", nextState: "updating", icon: "https://raw.githubusercontent.com/StrykerSKS/SmartThings/master/smartapp-icons/ecobee/png/systemmode_cool.png"
 			state "updating", label:"Working...", icon: "st.secondary.secondary"
 		}        
 		standardTile("setModeAuto", "device.thermostatMode", width: 2, height: 2, inactiveLabel: false, decoration: "flat") {			
-			state "auto", action:"thermostat.auto",  label: "Set Auto", nextState: "updating", icon: "https://raw.githubusercontent.com/StrykerSKS/SmartThings/master/smartapp-icons/ecobee/png/systemmode_auto.png"
+			state "auto", action:"thermostat.auto",  label: "Auto", nextState: "updating", icon: "https://raw.githubusercontent.com/StrykerSKS/SmartThings/master/smartapp-icons/ecobee/png/systemmode_auto.png"
 			state "updating", label:"Working...", icon: "st.secondary.secondary"
 		}
 		standardTile("setModeAuto", "device.thermostatMode", width: 2, height: 2, inactiveLabel: false, decoration: "flat") {			
-			state "off", action:"thermostat.off", label: "Set Off", nextState: "updating", icon: "https://raw.githubusercontent.com/StrykerSKS/SmartThings/master/smartapp-icons/ecobee/png/systemmode_off.png"
+			state "off", action:"thermostat.off", label: "Off", nextState: "updating", icon: "https://raw.githubusercontent.com/StrykerSKS/SmartThings/master/smartapp-icons/ecobee/png/systemmode_off.png"
 			state "updating", label:"Working...", icon: "st.secondary.secondary"
 		}
         
 
 		standardTile("fanModeLabeled", "device.thermostatFanMode", width: 2, height: 2, inactiveLabel: false, decoration: "flat") {
-			state "on", label:'Fan: ${currentValue}', action:"noOp", nextState: "on", icon: "https://raw.githubusercontent.com/StrykerSKS/SmartThings/master/smartapp-icons/ecobee/png/systemmode_fan.png"
-            state "auto", label:'Fan: ${currentValue}', action:"noOp", nextState: "auto", icon: "https://raw.githubusercontent.com/StrykerSKS/SmartThings/master/smartapp-icons/ecobee/png/systemmode_fan.png"
-			state "circulate", label:'Fan: ${currentValue}', action:"noOp", nextState: "circulate", icon: "https://raw.githubusercontent.com/StrykerSKS/SmartThings/master/smartapp-icons/ecobee/png/systemmode_fan.png"
+			state "on", label:'On', action:"noOp", nextState: "on", icon: "https://raw.githubusercontent.com/StrykerSKS/SmartThings/master/smartapp-icons/ecobee/png/systemmode_fan.png"
+            state "auto", label:'Auto', action:"noOp", nextState: "auto", icon: "https://raw.githubusercontent.com/StrykerSKS/SmartThings/master/smartapp-icons/ecobee/png/systemmode_fan.png"
+			state "circulate", label:'Circulate', action:"noOp", nextState: "circulate", icon: "https://raw.githubusercontent.com/StrykerSKS/SmartThings/master/smartapp-icons/ecobee/png/systemmode_fan.png"
             state "updating", label:"Working", icon: "st.secondary.secondary"
 		}
         
@@ -232,14 +264,14 @@ metadata {
 		standardTile("downButtonControl", "device.thermostatSetpoint", height: 1, width: 2, inactiveLabel: false, decoration: "flat") {
 			state "setpoint", action:"lowerSetpoint", icon:"st.thermostat.thermostat-down"
 		}
-		controlTile("heatSliderControl", "device.heatingSetpoint", "slider", height: 1, width: 4, inactiveLabel: false, range:"(15..85") {
-			state "setHeatingSetpoint", action:"thermostat.setHeatingSetpoint", backgroundColor:"#d04e00", unit: '${getTemperatureScale()}'
+		controlTile("heatSliderControl", "device.heatingSetpoint", "slider", height: 1, width: 4, inactiveLabel: false, range:"(15..85)") {
+			state "setHeatingSetpoint", action:"thermostat.setHeatingSetpoint", backgroundColor:"#d04e00", unit: 'C'
 		}
 		valueTile("heatingSetpoint", "device.heatingSetpoint", height: 1, width: 2, inactiveLabel: false, decoration: "flat") {
 			state "heat", label:'${currentValue}°\nHeat', unit:"dF", backgroundColor:"#d04e00"
 		}
-		controlTile("coolSliderControl", "device.coolingSetpoint", "slider", height: 1, width: 4, inactiveLabel: false, range:"(15..85") {
-			state "setCoolingSetpoint", action:"thermostat.setCoolingSetpoint", backgroundColor: "#1e9cbb", unit: '${getTemperatureScale()}'
+		controlTile("coolSliderControl", "device.coolingSetpoint", "slider", height: 1, width: 4, inactiveLabel: false, range:"(15..85)") {
+			state "setCoolingSetpoint", action:"thermostat.setCoolingSetpoint", backgroundColor: "#1e9cbb", unit: 'C'
 		}
 		valueTile("coolingSetpoint", "device.coolingSetpoint", width: 2, height: 1, inactiveLabel: false, decoration: "flat") {
 			state "cool", label:'${currentValue}°\nCool', unit:"dF", backgroundColor: "#1e9cbb"
@@ -250,7 +282,7 @@ metadata {
         
         
         standardTile("resumeProgram", "device.resumeProgram", width: 2, height: 2, inactiveLabel: false, decoration: "flat") {
-			state "resume", action:"resumeProgram", nextState: "updating", label:'Resume Program', icon:"https://raw.githubusercontent.com/StrykerSKS/SmartThings/master/smartapp-icons/ecobee/png/action_resume_program.png"
+			state "resume", action:"resumeProgram", nextState: "updating", label:'Resume', icon:"https://raw.githubusercontent.com/StrykerSKS/SmartThings/master/smartapp-icons/ecobee/png/action_resume_program.png"
 			state "updating", label:"Working", icon: "st.samsung.da.oven_ic_send"
 		}
         
@@ -274,18 +306,18 @@ metadata {
 		}
         
 		standardTile("setHome", "device.setHome", width: 2, height: 2, inactiveLabel: false, decoration: "flat") {
-			state "home", action:"home", nextState: "updating", label:'Set Home', icon:"https://raw.githubusercontent.com/StrykerSKS/SmartThings/master/smartapp-icons/ecobee/png/schedule_home_blue.png"
+			state "home", action:"home", nextState: "updating", label:'Home', icon:"https://raw.githubusercontent.com/StrykerSKS/SmartThings/master/smartapp-icons/ecobee/png/schedule_home_blue.png"
 			state "updating", label:"Working...", icon: "st.samsung.da.oven_ic_send"
 		}
         
         standardTile("setAway", "device.setAway", width: 2, height: 2, inactiveLabel: false, decoration: "flat") {
-			state "away", action:"away", nextState: "updating", label:'Set Away', icon:"https://raw.githubusercontent.com/StrykerSKS/SmartThings/master/smartapp-icons/ecobee/png/schedule_away_blue.png"
+			state "away", action:"away", nextState: "updating", label:'Away', icon:"https://raw.githubusercontent.com/StrykerSKS/SmartThings/master/smartapp-icons/ecobee/png/schedule_away_blue.png"
 			state "updating", label:"Working...", icon: "st.samsung.da.oven_ic_send"
 		}
 
         standardTile("setSleep", "device.setSleep", width: 2, height: 2, inactiveLabel: false, decoration: "flat") {
 			// state "sleep", action:"sleep", nextState: "updating", label:'Set Sleep', icon:"st.Bedroom.bedroom2"
-            state "sleep", action:"sleep", nextState: "updating", label:'Set Sleep', icon:"https://raw.githubusercontent.com/StrykerSKS/SmartThings/master/smartapp-icons/ecobee/png/schedule_asleep_blue.png"
+            state "sleep", action:"sleep", nextState: "updating", label:'Sleep', icon:"https://raw.githubusercontent.com/StrykerSKS/SmartThings/master/smartapp-icons/ecobee/png/schedule_asleep_blue.png"
 			state "updating", label:"Working...", icon: "st.samsung.da.oven_ic_send"
 		}
 
@@ -306,6 +338,7 @@ metadata {
         standardTile("motionState", "device.motion", width: 2, height: 2, inactiveLabel: false, decoration: "flat") {
 			state "active", action:"noOp", nextState: "active", label:"Motion", icon:"https://raw.githubusercontent.com/StrykerSKS/SmartThings/master/smartapp-icons/ecobee/png/motion_sensor_motion.png"
 			state "inactive", action: "noOp", nextState: "inactive", label:"No Motion", icon:"https://raw.githubusercontent.com/StrykerSKS/SmartThings/master/smartapp-icons/ecobee/png/motion_sensor_nomotion.png"
+            state "not supported", action: "noOp", nextState: "not supported", label: "N/A", icon:"https://raw.githubusercontent.com/StrykerSKS/SmartThings/master/smartapp-icons/ecobee/png/notsupported_x.png"
 		}
 
         // Weather Tiles and other Forecast related tiles
@@ -338,7 +371,7 @@ metadata {
 			state "100",			icon: "https://raw.githubusercontent.com/StrykerSKS/SmartThings/master/smartapp-icons/ecobee/png/weather_clear_night_100.png" // label: 'Sunny',			
 			state "101",			icon: "https://raw.githubusercontent.com/StrykerSKS/SmartThings/master/smartapp-icons/ecobee/png/weather_night_partly_cloudy_101.png" // label: 'Few Clouds',	
 			state "102",			icon: "https://raw.githubusercontent.com/StrykerSKS/SmartThings/master/smartapp-icons/ecobee/png/weather_night_partly_cloudy_101.png"
-			state "103",			icon: "https://raw.githubusercontent.com/StrykerSKS/SmartThings/master/smartapp-icons/ecobee/png/weather_night_mostly_cloudy_night_103.png"
+			state "103",			icon: "https://raw.githubusercontent.com/StrykerSKS/SmartThings/master/smartapp-icons/ecobee/png/weather_night_mostly_cloudy_103.png"
 			state "104",			icon: "https://raw.githubusercontent.com/StrykerSKS/SmartThings/master/smartapp-icons/ecobee/png/weather_cloudy_04.png"
 			state "105",			icon: "https://raw.githubusercontent.com/StrykerSKS/SmartThings/master/smartapp-icons/ecobee/png/weather_night_drizzle_105.png"
 			state "106",			icon: "https://raw.githubusercontent.com/StrykerSKS/SmartThings/master/smartapp-icons/ecobee/png/weather_night_rain_106.png"
@@ -438,6 +471,7 @@ def generateEvent(Map results) {
 
 			if (name=="temperature" || name=="heatingSetpoint" || name=="coolingSetpoint" || name=="weatherTemperature" ) {
 				def sendValue = value // ? convertTemperatureIfNeeded(value.toDouble(), "F", 1): value //API return temperature value in F
+                LOG("generateEvent(): Temperature value: ${sendValue}", 5, this, "trace")
 				isChange = isTemperatureStateChange(device, name, value.toString())
 				isDisplayed = isChange
 				event << [value: sendValue, isStateChange: isChange, displayed: isDisplayed]
@@ -1154,6 +1188,10 @@ def generateActivityFeedsEvent(notificationMessage) {
 
 def noOp() {
 	// Doesn't do anything. Here due to a formatting issue on the Tiles!
+}
+
+def getSliderRange() {
+	return wantMetric ? "(15..30)" : "(50..90)"
 }
 
 // Built in functions from SmartThings?

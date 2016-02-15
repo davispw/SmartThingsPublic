@@ -6,6 +6,8 @@ Ecobee Thermostat SmartApp(s) and related Device Types for use with the SmartThi
 - [Motivation](#motivation)
 - [Quick Links](#quicklinks)
 - [Features](#features)
+	- [Thermostat and Sensor Device User Interfaces](#features-therm-ui)
+	- [Ecobee (Connect) Smart App User Interface](#features-connect-sa)
 - [Installation](#installation)
   - [Install Device Types](#install-device-types)
   - [Install SmartApp in IDE](#install-smartapp)
@@ -30,7 +32,7 @@ Here are links to the working version of the repository being developed and main
 
 ## <a name="motivation">Motivation</a>
 
-The intent is to provide an Open Source Licensed implementation that can be used by the SmartThings community of users. This will help ensure accessibility for all users and provide for an easy mechanism for the community to help maintain/drive the functionality.
+The intent is to provide an Open Source Licensed ecobee-to-SmartThings implementation that can be used by the SmartThings community of users free of charge and without fear of the device disappearing in the future. This will help ensure accessibility for all users and provide for an easy mechanism for the community to help maintain/drive the functionality.
 
 The ultimate goal would be to have these capabilities become part of the stock drivers on the "master" branch. But until that time they will be maintained as a fork providing good visibility to any changes upstream.
 
@@ -45,15 +47,11 @@ The ultimate goal would be to have these capabilities become part of the stock d
 
 -----------------------------
 # <a name="features">Features</a>
-
-- Mention the capabilities
-- Provide pretty screenshots
-
 ## General
-This set of SmartApps and Device Handlers have been designed for simple installation, flexibile configuration options and easy operation. It is also extensible through the use of Child SmartApps that can easily be added to the configuration.
+This collection of SmartApps and Device Handlers has been designed for simple installation, flexibile configuration options and easy operation. It is also extensible through the use of Child SmartApps that can easily be added to the configuration. **And it fully implements the the related [SmartThings Capabilities](http://docs.smartthings.com/en/latest/capabilities-reference.html).**
 
 Key Highlights include:
-- Open Source Implementation! Free as in beer AND speech. No donations or purchase needed to use.
+- **Open Source Implementation!** Free as in beer AND speech. No donations or purchase needed to use.
 - Single installation SmartApp, `Ecobee (Connect)` used for installing both Thermostats **and** Sensors. No need for multiple apps just for installation! In fact, the `Ecobee (Connect)` SmartApp is the only SmartApp interface you'll need to access all available functions, including those provided by Child SmartApps (if installed).
 - Sophisticated User Interface: Uses custom Ecobee icons throughout the design to provide a more polished look and feel.
 - Display of current weather with support for separate day and night icons (just like on the front of your Ecobee thermostat)!
@@ -61,7 +59,7 @@ Key Highlights include:
 - Included Child SmartApp (`ecobee Routines`) for automating settings changes based on SmartThings Hello Modes being activated (such as through a Routine)
 - Full support for both Fahrenheit and Celsius
 
-## Thermostat and Sensor Device User Interfaces
+## <a name="features-therm-ui">Thermostat and Sensor Device User Interfaces</a>
 The primary user interface on a day-to-day basis will be two different types of Device Handlers that are shown on the `Things` list under `My Home` in the mobile app. Screenshots of both the `Ecobee Thermostat` and the `Ecobee Sensor` are shown below. 
 
 `Ecobee Thermostat` Device |  `Ecobee Thermostat` Device w/ Annotation
@@ -72,71 +70,18 @@ The primary user interface on a day-to-day basis will be two different types of 
 :-------------------------:|:-------------------------:
 <img src="https://raw.githubusercontent.com/StrykerSKS/SmartThings/master/smartapp-icons/ecobee/documentation/current_sensor_screenshot.png" border="1" width="250" /> |  <img src="https://raw.githubusercontent.com/StrykerSKS/SmartThings/master/smartapp-icons/ecobee/documentation/sensor_annotation_current.png" width="400" />
 
+Rich set of Ecobee related icons:
+<img src="https://raw.githubusercontent.com/StrykerSKS/SmartThings/master/smartapp-icons/ecobee/documentation/ST_ecobee_icons_thumbs.png" border="1" />
+
+## <a name="features-connect-sa">`Ecobee (Connect)` Smart App User Interface</a>
+The `Ecobee (Connect)` SmartApp provides a single SmartApp interface for accessing installation, updates, Child SmartApps and even debugging tools. The interface uses dynamic pages to guide the user through the installation process in order simplify the steps as much as possible.
+
+The SmartApp has the following screens:
+- 
 
 
-## SmartThings Capabilities Supported
-In order to support the broadest set of interactions with other parts of the SmartThings ecosystem, the below SmartThings Capabilities have been implemented. (More information about SmartThings Capabilities can be found [here](http://docs.smartthings.com/en/latest/capabilities-reference.html).
-
-Capabilities are important as it allows the device to be used and selected in other usecases (such as from other SmartApps) in a standard, interoperable way.
-
-
-### Device Handler: Ecobee Thermostat
-Supports the following capabilities (tagging capabilities not listed). Follow the links for more details on each capabability:
-* capability ["Thermostat"](http://docs.smartthings.com/en/latest/capabilities-reference.html#thermostat)
-* capability ["Temperature Measurement"](http://docs.smartthings.com/en/latest/capabilities-reference.html#temperature-measurement)
-* capability "Motion Sensor"
-* capability "Relative Humidity Measurement"
-* capability "Polling"
-* capability "Refresh"
-
-
-        
-#### Capability: [Thermostat](http://docs.smartthings.com/en/latest/capabilities-reference.html#thermostat) (_capability.thermostat_)
-
-Follow the above link to the capability for more details on the standard attributes and commands.
-
-**Compliance:** Fully Implemented
-
-**Additional Attributes:**
-
-**Attribute**		| **Type** 		| **Possible Values**
-:------------------|:-------------|:-------------------------------------------------:
-temperatureScale	| String		| "C" "F"
-thermostatStatus	|				|
-apiConnected		| String		| "full" "warn" "lost"
-currentProgram		| String		| 	 
-currentProgramId	| String		| 
-weatherSymbol		| String		| 
-
-- _temperatureScale_: Indicates if Fahrenheit of Celsius is being used
-- _thermostatStatus_: Used to provide status information to the UI such as "Resuming schedule..."
-- _apiConnected_: Indicates the current state of the API connection to the Ecobee servers
-- _currentProgram_: The string representation of the program (Comfort Setting) currently being executed.
-- _currentProgramId_: The ID of the current running program
-- _weatherSymbol_: Indicates the current weather pattern currently in effect according to the Ecobee forecast information (e.g. Partly Cloudy, Sunny, Fog, etc)
-
-
-**Additional Commands:**
-- _setTemperature(number)_
-- _auxHeatOnly()_
-- _raiseSetpoint()_
-- _lowerSetpoint()_
-- _resumeProgram()_
-- _setThermostatProgram(String)_
-- _home()_
-- _sleep()_
-- _away()_
-
-#### Capability: ["Thermostat"](http://docs.smartthings.com/en/latest/capabilities-reference.html#thermostat)
-Follow the above link to the capability for more details on the standard attributes and commands.
-
-**Compliance:** Fully Implemented
-
-
-
-### Device Handler: Ecobee Sensor
-
-
+## <a name="features-routines-sa">`ecobee Routines` Smart App User Interface</a>
+The `ecobee Routins` SmartApp provides the ability 
 
 
 -----------------------------
@@ -328,7 +273,7 @@ Once you have determined that an update is available, follow these steps:
 
 You should now be running on the updated code. Be sure that you check for both updates of the SmartApp **and** the Device Type. Updating one but not the other could cause compatibility problems.
 
-### Updating manually (without GitHub Integration
+### Updating manually (without GitHub Integration)
 
 > TODO: Fill in the directions for manual upgrade
 
@@ -376,3 +321,73 @@ Licensed under the Apache License, Version 2.0 (the "License"); you may not use 
       http://www.apache.org/licenses/LICENSE-2.0
 
 Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the specific language governing permissions and limitations under the License.
+
+## Apendices
+
+## SmartThings Capabilities Supported
+In order to support the broadest set of interactions with other parts of the SmartThings ecosystem, the below SmartThings Capabilities have been implemented. (More information about SmartThings Capabilities can be found [here](http://docs.smartthings.com/en/latest/capabilities-reference.html).
+
+Capabilities are important as it allows the device to be used and selected in other usecases (such as from other SmartApps) in a standard, interoperable way.
+
+
+### Device Handler: Ecobee Thermostat
+Supports the following capabilities (tagging capabilities not listed). Follow the links for more details on each capabability:
+* capability ["Thermostat"](http://docs.smartthings.com/en/latest/capabilities-reference.html#thermostat)
+* capability ["Temperature Measurement"](http://docs.smartthings.com/en/latest/capabilities-reference.html#temperature-measurement)
+* capability ["Motion Sensor"](http://docs.smartthings.com/en/latest/capabilities-reference.html#motion-sensor)
+* capability ["Relative Humidity Measurement"](http://docs.smartthings.com/en/latest/capabilities-reference.html#relative-humidity-measurement)
+* capability "Polling"
+* capability "Refresh"
+
+
+        
+#### Capability: [Thermostat](http://docs.smartthings.com/en/latest/capabilities-reference.html#thermostat) (_capability.thermostat_)
+
+Follow the above link to the capability for more details on the standard attributes and commands.
+
+**Compliance:** Fully Implemented
+
+**Additional Attributes:**
+
+**Attribute**		| **Type** 		| **Possible Values**
+:------------------|:-------------|:-------------------------------------------------:
+temperatureScale	| String		| "C" "F"
+thermostatStatus	|				|
+apiConnected		| String		| "full" "warn" "lost"
+currentProgram		| String		| 	 
+currentProgramId	| String		| 
+weatherSymbol		| String		| 
+
+- _temperatureScale_: Indicates if Fahrenheit of Celsius is being used
+- _thermostatStatus_: Used to provide status information to the UI such as "Resuming schedule..."
+- _apiConnected_: Indicates the current state of the API connection to the Ecobee servers
+- _currentProgram_: The string representation of the program (Comfort Setting) currently being executed.
+- _currentProgramId_: The ID of the current running program
+- _weatherSymbol_: Indicates the current weather pattern currently in effect according to the Ecobee forecast information (e.g. Partly Cloudy, Sunny, Fog, etc)
+
+
+**Additional Commands:**
+- _setTemperature(number)_
+- _auxHeatOnly()_
+- _raiseSetpoint()_
+- _lowerSetpoint()_
+- _resumeProgram()_
+- _setThermostatProgram(String)_
+- _home()_
+- _sleep()_
+- _away()_
+
+#### Capability: [Temperature Measurement](http://docs.smartthings.com/en/latest/capabilities-reference.html#temperature-measurement) (capability.temperatureMeasurement)
+Follow the above link to the capability for more details on the standard attributes and commands.
+
+**Compliance:** Fully Implemented
+
+
+
+### Device Handler: Ecobee Sensor
+Supports the following capabilities (tagging capabilities not listed). Follow the links for more details on each capabability:
+* capability ["Temperature Measurement"](http://docs.smartthings.com/en/latest/capabilities-reference.html#temperature-measurement)
+* capability ["Motion Sensor"](http://docs.smartthings.com/en/latest/capabilities-reference.html#motion-sensor)
+* capability "Polling"
+* capability "Refresh"
+
