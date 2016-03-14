@@ -1,22 +1,31 @@
-/**
- *  SmartSense Multi
+/*
+===============================================================================
+ *  Copyright 2016 SmartThings
  *
- *  Copyright 2015 SmartThings
- *
- *  Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except
- *  in compliance with the License. You may obtain a copy of the License at:
+ *  Licensed under the Apache License, Version 2.0 (the "License"); you may not
+ *  use this file except in compliance with the License. You may obtain a copy 
+ *  of the License at:
  *
  *      http://www.apache.org/licenses/LICENSE-2.0
  *
- *  Unless required by applicable law or agreed to in writing, software distributed under the License is distributed
- *  on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License
- *  for the specific language governing permissions and limitations under the License.
+ *  Unless required by applicable law or agreed to in writing, software 
+ *  distributed under the License is distributed on an "AS IS" BASIS, WITHOUT 
+ *  WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the 
+ *  License for the specific language governing permissions and limitations 
+ *  under the License.
+===============================================================================
+ *  Purpose: SmartSense Multi Sensor DTH File
  *
+ *  Filename: SmartSense-Multi-Sensor.src/SmartSense-Multi-Sensor.groovy
+ *
+ *  Change History:
+ *  1. 20160117 TW - Update/Edit to support i18n translations
+ *  2. 20160125 TW = Incorporated new battery mapping from TM
+===============================================================================
  */
 
  metadata {
  	definition (name: "SmartSense Multi Sensor", namespace: "smartthings", author: "SmartThings") {
- 		
         capability "Three Axis"
 		capability "Battery"
  		capability "Configuration"
@@ -62,11 +71,11 @@
 				])
 		}
 		section {
- 			input title: "Temperature Offset", description: "This feature allows you to correct any temperature variations by selecting an offset. Ex: If your sensor consistently reports a temp that's 5 degrees too warm, you'd enter \"-5\". If 3 degrees too cold, enter \"+3\".", displayDuringSetup: false, type: "paragraph", element: "paragraph"
- 			input "tempOffset", "number", title: "Degrees", description: "Adjust temperature by this many degrees", range: "*..*", displayDuringSetup: false
- 		}
+			input title: "Temperature Offset", description: "This feature allows you to correct any temperature variations by selecting an offset. Ex: If your sensor consistently reports a temp that's 5 degrees too warm, you'd enter '-5'. If 3 degrees too cold, enter '+3'.", displayDuringSetup: false, type: "paragraph", element: "paragraph"
+			input "tempOffset", "number", title: "Degrees", description: "Adjust temperature by this many degrees", range: "*..*", displayDuringSetup: false
+		}
 		section {
- 			input("garageSensor", "enum", title: "Do you want to use this sensor on a garage door?", options: ["Yes", "No"], defaultValue: "No", required: false, displayDuringSetup: false)
+ 			input("garageSensor", "enum", title: "Do you want to use this sensor on a garage door?", translatable: true, description: "Tap to set", options: ["Yes","No"], defaultValue: "No", required: false, displayDuringSetup: false)
 		}
  	}
 
@@ -205,9 +214,7 @@ private List parseReportAttributeMessage(String description) {
         result << getAccelerationResult(descMap.value)
 	}
 	else if (descMap.cluster == "FC02" && descMap.attrId == "0012" && descMap.value.size() == 24) {
-		// The size is checked to ensure the attribute report contains X, Y and Z values
-		// If all three axis are not included then the attribute report is ignored
-		result << parseAxis(descMap.value)
+        result << parseAxis(descMap.value)
 	}
 	else if (descMap.cluster == "0001" && descMap.attrId == "0020") {
 		result << getBatteryResult(Integer.parseInt(descMap.value, 16))
@@ -276,19 +283,19 @@ def updated() {
 	if (garageSensor == "Yes") {
 		def descriptionText = "Updating device to garage sensor"
 		if (device.latestValue("status") == "open") {
-			sendEvent(name: 'status', value: 'garage-open', descriptionText: descriptionText)
+			sendEvent(name: 'status', value: 'garage-open', descriptionText: descriptionText, translatable: true)
 		}
 		else if (device.latestValue("status") == "closed") {
-			sendEvent(name: 'status', value: 'garage-closed', descriptionText: descriptionText)
+			sendEvent(name: 'status', value: 'garage-closed', descriptionText: descriptionText, translatable: true)
 		}
 	}
 	else {
 		def descriptionText = "Updating device to open/close sensor"
 		if (device.latestValue("status") == "garage-open") {
-			sendEvent(name: 'status', value: 'open', descriptionText: descriptionText)
+			sendEvent(name: 'status', value: 'open', descriptionText: descriptionText, translatable: true)
 		}
 		else if (device.latestValue("status") == "garage-closed") {
-			sendEvent(name: 'status', value: 'closed', descriptionText: descriptionText)
+			sendEvent(name: 'status', value: 'closed', descriptionText: descriptionText, translatable: true)
 		}
 	}
 }
@@ -302,132 +309,173 @@ def getTemperature(value) {
 		}
 	}
 
-	private Map getBatteryResult(rawValue) {
-		log.debug "Battery"
-        log.debug rawValue
-		def linkText = getLinkText(device)
+private Map getBatteryResult(rawValue) {
+	log.debug "Battery rawValue = ${rawValue}"
+	def linkText = getLinkText(device)
 
-		def result = [
+	def result = [
 		name: 'battery',
-        value: '--'
-		]
+		value: '--',
+		translatable: true
+	]
 
-		def volts = rawValue / 10
-		def descriptionText
-        
-        if (rawValue == 255) {}
-        else {
-		
-        if (volts > 3.5) {
-			result.descriptionText = "${linkText} battery has too much power (${volts} volts)."
+	def volts = rawValue / 10
+
+	if (rawValue == 0 || rawValue == 255) {}
+	else {
+		if (volts > 3.5) {
+			result.descriptionText = "{{ device.displayName }} battery has too much power: (> 3.5) volts."
 		}
 		else {
-			def minVolts = 2.1
-			def maxVolts = 3.0
-			def pct = (volts - minVolts) / (maxVolts - minVolts)
-			result.value = Math.min(100, (int) pct * 100)
-			result.descriptionText = "${linkText} battery was ${result.value}%"
-		}}
+			if (device.getDataValue("manufacturer") == "SmartThings") {         
+				volts = rawValue // For the batteryMap to work the key needs to be an int
+				def batteryMap = [28:100, 27:100, 26:100, 25:90, 24:90, 23:70,
+								  22:70, 21:50, 20:50, 19:30, 18:30, 17:15, 16:1, 15:0]
+				def minVolts = 15
+				def maxVolts = 28
 
-		return result
-	}
-
-	private Map getTemperatureResult(value) {
-		log.debug "Temperature"
-		def linkText = getLinkText(device)
-		if (tempOffset) {
-			def offset = tempOffset as int
-			def v = value as int
-			value = v + offset
+				if (volts < minVolts)
+					volts = minVolts
+				else if (volts > maxVolts)
+					volts = maxVolts
+				def pct = batteryMap[volts]
+				if (pct != null) {
+					result.value = pct
+                    def value = pct
+					result.descriptionText = "{{ device.displayName }} battery was {{ value }}"
+				}
+			}
+			else {
+				def minVolts = 2.1
+				def maxVolts = 3.0
+				def pct = (volts - minVolts) / (maxVolts - minVolts)
+				result.value = Math.min(100, (int) pct * 100)
+				result.descriptionText = "{{ device.displayName }} battery was {{ value }}"
+			}
 		}
-		def descriptionText = "${linkText} was ${value}°${temperatureScale}"
-		return [
-		name: 'temperature',
+	}
+
+	return result
+}
+
+private Map getTemperatureResult(value) {
+	log.debug 'TEMP'
+    def name = "temperature"
+	if (tempOffset) {
+		def offset = tempOffset as int
+		def v = value as int
+		value = v + offset
+	}
+    
+    def descriptionText
+    if ( temperatureScale == 'C' )
+    	descriptionText = '{{ device.displayName }} was {{ value }}°C'
+    else
+    	descriptionText = '{{ device.displayName }} was {{ value }}°F'
+
+	return [
+		name: name,
 		value: value,
-		descriptionText: descriptionText
+		descriptionText: descriptionText,
+        translatable: true
+	]
+}
+
+private Map getContactResult(value) {
+	log.debug "Contact: ${device.displayName} value = ${value}"
+    def name = "contact"
+    
+    def descriptionText    
+    if ( value == 'open' )    
+		descriptionText = '{{ device.displayName }} was opened'
+    else
+    	descriptionText = '{{ device.displayName }} was closed'
+        
+    sendEvent(name: 'status', value: value, descriptionText: descriptionText, displayed: false)
+    def isStateChange = isStateChange(device, name, value)
+	return [
+		name: name,
+		value: value,
+		descriptionText: descriptionText,
+        isStateChange: isStateChange,
+        translatable: true
+	]
+	
+}
+
+private getAccelerationResult(numValue) {
+	log.debug "Acceleration is $value"
+	def name = "acceleration"
+    def value
+    def descriptionText
+    
+	if ( numValue.endsWith("1") ) {
+    	value = "active"
+        descriptionText = '{{ device.displayName }} was active'
+    } else {
+    	value = "inactive"
+        descriptionText = '{{ device.displayName }} was inactive'
+    }
+
+	def isStateChange = isStateChange(device, name, value)
+	return [
+		name: name,
+		value: value,
+		descriptionText: descriptionText,
+		isStateChange: isStateChange,
+		translatable: true
+	]
+}
+
+def refresh() {
+	log.debug "Refreshing Values "
+
+	def refreshCmds = []
+
+	if (device.getDataValue("manufacturer") == "SmartThings") {
+		log.debug "Refreshing Values for manufacturer: SmartThings "
+		refreshCmds = refreshCmds + [
+			/* These values of Motion Threshold Multiplier(01) and Motion Threshold (7602)
+				seem to be giving pretty accurate results for the XYZ co-ordinates for this manufacturer.
+				Separating these out in a separate if-else because I do not want to touch Centralite part
+				as of now.
+			*/
+
+			"zcl mfg-code ${manufacturerCode}", "delay 200",
+			"zcl global write 0xFC02 0 0x20 {01}", "delay 200",
+			"send 0x${device.deviceNetworkId} 1 1", "delay 400",
+
+			"zcl mfg-code ${manufacturerCode}", "delay 200",
+			"zcl global write 0xFC02 2 0x21 {7602}", "delay 200",
+			"send 0x${device.deviceNetworkId} 1 1", "delay 400",
+		]
+	} else {
+		refreshCmds = refreshCmds + [
+			/* sensitivity - default value (8) */
+			"zcl mfg-code ${manufacturerCode}", "delay 200",
+			"zcl global write 0xFC02 0 0x20 {02}", "delay 200",
+			"send 0x${device.deviceNetworkId} 1 1", "delay 400",
 		]
 	}
 
-	private Map getContactResult(value) {
-		log.debug "Contact"
-		def linkText = getLinkText(device)
-		def descriptionText = "${linkText} was ${value == 'open' ? 'opened' : 'closed'}"
-		sendEvent(name: 'contact', value: value, descriptionText: descriptionText, displayed:false)
-		sendEvent(name: 'status', value: value, descriptionText: descriptionText)
-	}
+	//Common refresh commands
+	refreshCmds = refreshCmds + [
+		"st rattr 0x${device.deviceNetworkId} 1 0x402 0", "delay 200",
+		"st rattr 0x${device.deviceNetworkId} 1 1 0x20", "delay 200",
 
-	private getAccelerationResult(numValue) {
-		log.debug "Acceleration"
-        def name = "acceleration"
-		def value = numValue.endsWith("1") ? "active" : "inactive"
-		def linkText = getLinkText(device)
-		def descriptionText = "$linkText was $value"
-		def isStateChange = isStateChange(device, name, value)
-		[
-			name: name,
-			value: value,
-			descriptionText: descriptionText,
-			isStateChange: isStateChange
-		]
-	}
+		"zcl mfg-code ${manufacturerCode}", "delay 200",
+		"zcl global read 0xFC02 0x0010",
+		"send 0x${device.deviceNetworkId} 1 1","delay 400"
+	]
 
-	def refresh() {
-		log.debug "Refreshing Values "
-        
-        def refreshCmds = []
-        
-		if (device.getDataValue("manufacturer") == "SmartThings") {
-        	
-			log.debug "Refreshing Values for manufacturer: SmartThings "
-         	refreshCmds = refreshCmds + [
+	return refreshCmds + enrollResponse()
+}
 
-	            /* These values of Motion Threshold Multiplier(01) and Motion Threshold (7602)
-	               seem to be giving pretty accurate results for the XYZ co-ordinates for this manufacturer. 
-	               Separating these out in a separate if-else because I do not want to touch Centralite part 
-	               as of now. 
-	            */
-
-	            "zcl mfg-code ${manufacturerCode}", "delay 200",
-	            "zcl global write 0xFC02 0 0x20 {01}", "delay 200",
-	            "send 0x${device.deviceNetworkId} 1 1", "delay 400",
-	            
-	            "zcl mfg-code ${manufacturerCode}", "delay 200",
-	            "zcl global write 0xFC02 2 0x21 {7602}", "delay 200",
-            	"send 0x${device.deviceNetworkId} 1 1", "delay 400",
-                
-            ]
-            
-        
-        } else {
-             refreshCmds = refreshCmds + [
-
-                /* sensitivity - default value (8) */
-	            "zcl mfg-code ${manufacturerCode}", "delay 200",
-                "zcl global write 0xFC02 0 0x20 {02}", "delay 200",
-            	"send 0x${device.deviceNetworkId} 1 1", "delay 400",
-            ]
-        }
-        
-        //Common refresh commands
-        refreshCmds = refreshCmds + [
-            "st rattr 0x${device.deviceNetworkId} 1 0x402 0", "delay 200",
-            "st rattr 0x${device.deviceNetworkId} 1 1 0x20", "delay 200",
-
-            "zcl mfg-code ${manufacturerCode}", "delay 200",
-            "zcl global read 0xFC02 0x0010",
-            "send 0x${device.deviceNetworkId} 1 1","delay 400"
-        ]
-
-		return refreshCmds + enrollResponse()
-	}
-
-	def configure() {
-
-		String zigbeeEui = swapEndianHex(device.hub.zigbeeEui)
-		log.debug "Configuring Reporting"
+def configure() {
+	String zigbeeEui = swapEndianHex(device.hub.zigbeeEui)
+	log.debug "Configuring Device Reporting"
 		
-		def configCmds = [
-
+	def configCmds = [
 		"zcl global write 0x500 0x10 0xf0 {${zigbeeEui}}", "delay 200",
 		"send 0x${device.deviceNetworkId} 1 ${endpointId}", "delay 500",
 
@@ -455,10 +503,8 @@ def getTemperature(value) {
 		"zcl mfg-code ${manufacturerCode}",
 		"zcl global send-me-a-report 0xFC02 0x0014 0x29 1 3600 {01}",
 		"send 0x${device.deviceNetworkId} 1 ${endpointId}", "delay 500"
-
-		]
-   
-   return configCmds + refresh()
+	]
+	return configCmds + refresh()
 }
 
 private getEndpointId() {
@@ -524,9 +570,14 @@ def garageEvent(zValue) {
 	}
 	if (contactValue != null){
 		def linkText = getLinkText(device)
-		def descriptionText = "${linkText} was ${contactValue == 'open' ? 'opened' : 'closed'}"
-		sendEvent(name: 'contact', value: contactValue, descriptionText: descriptionText, displayed:false)
-		sendEvent(name: 'status', value: garageValue, descriptionText: descriptionText)
+        if ( contactValue == 'open' ) {
+        	descriptionText: '{{ device.displayName }} was opened'
+            sendEvent(name: 'contact', value: contactValue, descriptionText: '{{ device.displayName }} was opened', displayed:false, translatable: true)
+            sendEvent(name: 'status', value: garageValue, descriptionText: '{{ device.displayName }} status was opened', translatable: true)
+        } else {
+			sendEvent(name: 'contact', value: contactValue, descriptionText: '{{ device.displayName }} was closed', displayed:false, translatable: true)
+            sendEvent(name: 'status', value: garageValue, descriptionText: '{{ device.displayName }} status was closed', translatable: true)
+        }
 	}
 }
 
@@ -582,5 +633,3 @@ private byte[] reverseArray(byte[] array) {
 	}
 	return array
 }
-
-
