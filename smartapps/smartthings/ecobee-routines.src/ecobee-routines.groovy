@@ -55,7 +55,7 @@ def mainPage() {
                 if(settings.whichProgram != "Resume Program") input(name: "holdType", title: "Select the Hold Type to use\n(Optional) ", type: "enum", required: false, multiple: false, description: "Tap to choose...", metadata:[values:["Until I Change", "Until Next Program", "default"]], submitOnChange: true)
                 input(name: "useSunriseSunset", title: "Also at Sunrise or Sunset?\n(Optional) ", type: "enum", required: false, multiple: true, description: "Tap to choose...", metadata:[values:["Sunrise", "Sunset"]], submitOnChange: true)                
             }            
-            input(name: "tempDisable", title: "Temporarily Disable Handler? ", type: "bool", required: false, description: false, submitOnChange: true)                
+            input(name: "tempDisable", title: "Temporarily Disable Handler? ", type: "bool", required: false, description: "", submitOnChange: true)                
         }
         
         section (getVersionLabel())
