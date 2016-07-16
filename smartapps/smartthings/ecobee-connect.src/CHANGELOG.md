@@ -5,15 +5,62 @@ Notable changes to this project will be documented in this file.
 This project is in a pre-1.0 state. This means that its APIs and behavior are subject to breaking changes without deprecation notices. However, all due efforts will be made to warn the user. Until 1.0, version numbers will follow a [Semver][]-ish `0.y.z` format, where `y` is incremented when new features or breaking changes are introduced, and `z` is incremented for lesser changes or bug fixes.
 
 
-## [Beta][] (Ongoing)
-* Follow the link to see the comparison between the stable release and the beta branch (`StrykerSKS-enhanced-ecobee`)
+## [0.9.17][] (2016-6-28)
+### General Changes
+* Added new Child SmartApp `Open Contacts` to detect open doors/windows
+* Better handling of Debug Level zero (0) to reduce logging
+* Minor change to apiConnected events to reduce logging/event stream
 
-## [Alpha][] (Ongoing)
-* Follow the link to see the comparison between the stable release and the beta branch (`StrykerSKS-enhanced-ecobee`)
-* **NOTE: This is my active development branch. Things on this branch are very likely to break at random times. Provided for informational purposes only!**
+### ecobee Open Contacts SmartApp
+* Brand new SmartApp
+
+Features include:
+* Change one or multiple thermostats
+* Trigger based on one or multiple contact sensors
+* Configurable delay timers (for trigger and reset)
+* Configurable actions: Notify Only, HVAC Only or Both
+* Support for Contact Book or simply SMS for notifications
+* Temporarily Disable app without having to delete and recreate!
 
 
-## [0.9.0-RC6][] (2016-02-01) **(Beta Release)**
+## [0.9.13][] (2016-02-28) **(Beta Release)**
+### General Changes
+* 11 changed files with 1,368 additions and 1,095 deletions
+* Overhauled authentication handling with much better stability
+* Revamped UI to give it a more familiar look that ecobee users are used to
+* Removal of certain 3PP code segments and update of Copyright Headers
+
+
+### SmartApp Changes
+#### Ecobee (Connect) SmartApp
+* Completely overhauled Authentication Token Handling using recommended sequence outlined in Ecobee API documentation. **This has greatly improved the stability of the API connection!**
+* [Experimental] Adds support for one (1) and three (3) minute polling intervals
+* Added ability to use external devices (such as motion sensors, temperature readings, etc) to trigger additional polling events (and also trigger the watchdog)
+* Fixed issue causing the added devices to show and not configured in the Marketplace in the Mobile App
+* Added sunrise()/sunset() events to watchdog handling and to determine day/night for icons
+* Implemented off() and circulate() modes for the fan along with the appropriate state information to allow a proper return using resumeProgram()
+* Implemented support for getting the current HVAC Mode
+* Added `update()` and `refreshAuthToken()` helper functions to the Debug Dashboard
+
+#### ecobee Routines Child SmartApp
+* Cleaned up UI to better reflect how users will use the features
+* Added support for triggered Routines, not just Modes
+* Added support for custom Programs (in addition to the standard Home, Away and Sleep)
+
+
+### Device Handler Changes
+* [All] Updated with new UI Scheme using themed icons
+* [Sensor] States for when the motion sensor is not supported
+* [Thermostat] Added full range of Thermostat Capabilities
+* [Thermostat] Added a "Last Poll" Timestamp to the UI to make it easier to determine when the most recent successful poll took place
+* [Thermostat] Added a Tile to show the current HVAC System Status (On, Off, Auto, Off)
+* [Thermostat] Added support for both day **and** night weather icons 
+* [Thermostat] Removal of many un-needed functions (commands) that weren't part of the standard capabilities set
+
+
+
+
+## [0.9.0-RC6][] (2016-02-01) 
 ### General Changes
 * 3 changed files with 876 additions and 467 deletions (To be updated)
 * Introduction of support for Child SmartApps! First SmartApp is `ecobee Routines` for using SmartThings Modes (Routines) to control the modes (and other settings) on the Ecobee Thermostats
@@ -85,8 +132,12 @@ This project is in a pre-1.0 state. This means that its APIs and behavior are su
 * Checkpoint from previous commits to use as baseline
 * Click the release number to see all of the changes made to this branch up until this date
 
+
+
 [Semver]: http://semver.org
-[0.9.0-RC6]: https://github.com/StrykerSKS/SmartThingsPublic/compare/StrykerSKS:v0.9.0-RC6...StrykerSKS:v0.8.0
+[0.9.0-17]: https://github.com/StrykerSKS/SmartThingsPublic/commit/90e648d7827fcfd81036f545f8b15a269bb2c3cd#diff-56eb4c4a092c115bba0049125518e88e
+[0.9.0-13]: https://github.com/StrykerSKS/SmartThingsPublic/compare/v0.9.0-RC6...v0.9.13 
+[0.9.0-RC6]: https://github.com/StrykerSKS/SmartThingsPublic/compare/StrykerSKS:v0.8.0...StrykerSKS:v0.9.0-RC6
 [0.8.0]: https://github.com/StrykerSKS/SmartThingsPublic/compare/StrykerSKS:v0.7.5...StrykerSKS:v0.8.0
 [0.7.5]: https://github.com/StrykerSKS/SmartThingsPublic/compare/302bb77d7237132caaa5281b64d4bfbf4420f7cf...StrykerSKS:v0.7.5
 [0.6.0]: https://github.com/StrykerSKS/SmartThingsPublic/compare/master...StrykerSKS:302bb77d7237132caaa5281b64d4bfbf4420f7cf
@@ -94,5 +145,3 @@ This project is in a pre-1.0 state. This means that its APIs and behavior are su
 [Development]: https://github.com/StrykerSKS/SmartThingsPublic/compare/StrykerSKS:v0.8.0...HEAD
 [Beta]: https://github.com/StrykerSKS/SmartThingsPublic/compare/StrykerSKS:HEAD...StrykerSKS-enhanced-ecobeedevice
 [Alpha]: https://github.com/StrykerSKS/SmartThingsPublic/compare/StrykerSKS:HEAD...StrykerSKS-development
-
-
