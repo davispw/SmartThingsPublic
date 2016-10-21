@@ -183,8 +183,8 @@ metadata
 
 
 		main "toggle"
-		details(["toggle", "lock", "unlock", "alarmMode", "alarmSensitivity", "battery", "autoLock", "lockLeave", "refresh"])
-//		details(["toggle", "lock", "unlock", "alarmMode", "alarmSensitivity", "battery", "autoLock", "lockLeave", "vacationMode", "beeperMode", "refresh"])
+//		details(["toggle", "lock", "unlock", "alarmMode", "alarmSensitivity", "battery", "autoLock", "lockLeave", "refresh"])
+		details(["toggle", "lock", "unlock", "alarmMode", "alarmSensitivity", "battery", "autoLock", "lockLeave", "vacationMode", "beeperMode", "refresh"])
 	}
 }
 

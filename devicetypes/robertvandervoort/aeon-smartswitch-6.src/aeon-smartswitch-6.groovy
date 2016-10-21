@@ -123,6 +123,7 @@ def updated()
 
 def parse(String description)
 {
+	log.trace "parse(${description})"
 	def result = null
 	if (description.startsWith("Err 106")) {
 		state.sec = 0
@@ -141,6 +142,7 @@ def parse(String description)
 def zwaveEvent(physicalgraph.zwave.commands.securityv1.SecurityMessageEncapsulation cmd) {
 	def encapsulatedCommand = cmd.encapsulatedCommand([0x25: 1, 0x26: 1, 0x27: 1, 0x32: 3, 0x33: 3, 0x59: 1, 0x70: 1, 0x72: 2, 0x73: 1, 0x82: 1, 0x85: 2, 0x86: 2])
 	state.sec = 1
+	log.trace "zwaveEvent(SecurityMessageEncapsulation(${encapsulatedCommand}))"
 	// log.debug "encapsulated: ${encapsulatedCommand}"
 	if (encapsulatedCommand) {
 		zwaveEvent(encapsulatedCommand)
@@ -151,6 +153,7 @@ def zwaveEvent(physicalgraph.zwave.commands.securityv1.SecurityMessageEncapsulat
 }
 
 def zwaveEvent(physicalgraph.zwave.commands.securityv1.SecurityCommandsSupportedReport cmd) {
+	log.trace "zwaveEvent(SecurityCommandsSupportedReport)...configuring"
 	response(configure())
 }
 
@@ -176,9 +179,9 @@ def zwaveEvent(physicalgraph.zwave.commands.meterv3.MeterReport cmd) {
     def electricUnits = ["kWh",    "kVAh",   "W",     "pulses", "V",       "A",       "Power Factor", ""]
 
     //NOTE ScaledPreviousMeterValue does not always contain a value
-    def previousValue = cmd.scaledPreviousMeterValue ?: 0
+    def previousValue = (cmd.scaledPreviousMeterValue ?: 0)
 
-    def map = [ name: electricNames[cmd.scale], unit: electricUnits[cmd.scale], displayed: state.display]
+    def map = [ name: electricNames[cmd.scale], unit: electricUnits[cmd.scale] ]
     switch(cmd.scale) {
         case 0: //kWh
 	    previousValue = device.currentValue("energy") ?: cmd.scaledPreviousMeterValue ?: 0
@@ -209,30 +212,41 @@ def zwaveEvent(physicalgraph.zwave.commands.meterv3.MeterReport cmd) {
         default:
             break;
     }
+    
+    if (previousValue instanceof String) {
+    	previousValue = new BigDecimal(previousValue)
+    }
+    
     //Check if the value has changed by more than 5%, if so mark as a stateChange
-    //map.isStateChange = ((cmd.scaledMeterValue - previousValue).abs() > (cmd.scaledMeterValue * 0.05))
+    map.displayed = ((cmd.scaledMeterValue - previousValue).abs() > (cmd.scaledMeterValue * 0.05))
 
-    createEvent(map)
+	def event = createEvent(map)
+    log.trace "zwaveEvent(MeterReport) => $event"
+    return event
 }
 
 def zwaveEvent(physicalgraph.zwave.commands.basicv1.BasicReport cmd)
 {
-	[name: "switch", value: cmd.value ? "on" : "off", type: "physical", displayed: true, isStateChange: true]
+	log.trace "zwaveEvent(BasicReport) => ${cmd.value}"
+	createEvent([name: "switch", value: cmd.value ? "on" : "off", type: "physical", displayed: true])
 }
 
 def zwaveEvent(physicalgraph.zwave.commands.basicv1.BasicSet cmd) 
 {
-    [name: "switch", value: cmd.value ? "on" : "off", type: "physical", displayed: true, isStateChange: true]
+	log.trace "zwaveEvent(BasicSet) => ${cmd.value}"
+//    createEvent([name: "switch", value: cmd.value ? "on" : "off", type: "physical", displayed: true])
 }
 
 def zwaveEvent(physicalgraph.zwave.commands.switchbinaryv1.SwitchBinaryReport cmd)
 {
-	[name: "switch", value: cmd.value ? "on" : "off", type: "digital", displayed: true, isStateChange: true]
+	log.trace "zwaveEvent(SwitchBinaryReport) => ${cmd.value}"
+//	createEvent([name: "switch", value: cmd.value ? "on" : "off", type: "digital", displayed: true])
 }
 
 def zwaveEvent(physicalgraph.zwave.commands.switchbinaryv1.SwitchBinarySet cmd)
 {
-    [name: "switch", value: cmd.value ? "on" : "off", type: "digital", displayed: true, isStateChange: true]
+	log.trace "zwaveEvent(SwitchBinarySet) => ${cmd.value}"
+//    createEvent([name: "switch", value: cmd.value ? "on" : "off", type: "digital", displayed: true])
 }
 
 def zwaveEvent(physicalgraph.zwave.Command cmd) {
@@ -241,19 +255,21 @@ def zwaveEvent(physicalgraph.zwave.Command cmd) {
 }
 
 def on() {
+	log.info "Turning on!"
 	def request = [
 		zwave.basicV1.basicSet(value: 0xFF),
 	    zwave.basicV1.basicGet(),
-		zwave.switchBinaryV1.switchBinaryGet()
+//		zwave.switchBinaryV1.switchBinaryGet()
 	]
     commands(request)
 }
 
 def off() {
+	log.info "Turning off!"
 	def request = [
 		zwave.basicV1.basicSet(value: 0x00),
         zwave.basicV1.basicGet(),
-		zwave.switchBinaryV1.switchBinaryGet()
+//		zwave.switchBinaryV1.switchBinaryGet()
 	]
     commands(request)
 }
@@ -270,8 +286,9 @@ def setColor(value) {
 }
 
 def poll() {
+	log.trace "poll()"
 	def request = [
-		zwave.switchBinaryV1.switchBinaryGet(),
+//		zwave.switchBinaryV1.switchBinaryGet(),
         zwave.basicV1.basicGet(),
 		zwave.meterV3.meterGet(scale: 0),	//kWh
         zwave.meterV3.meterGet(scale: 1),	//kVAh
@@ -284,14 +301,22 @@ def poll() {
 }
 
 def refresh() {
+	log.trace "refresh()"
 	def request = [
         zwave.basicV1.basicGet(),
-		zwave.switchBinaryV1.switchBinaryGet()
+//		zwave.switchBinaryV1.switchBinaryGet()
+		zwave.meterV3.meterGet(scale: 0),	//kWh
+        zwave.meterV3.meterGet(scale: 1),	//kVAh
+		zwave.meterV3.meterGet(scale: 2),	//Wattage
+		zwave.meterV3.meterGet(scale: 4),	//Volts
+		zwave.meterV3.meterGet(scale: 5),	//Amps
+        zwave.meterV3.meterGet(scale: 6)	//Power Factor
 	]
     commands(request)
 }
 
 def reset() {
+	log.info "reset()"
 	def request = [
 		zwave.meterV3.meterReset(),
 		zwave.meterV3.meterGet(scale: 0),	//kWh
@@ -360,7 +385,9 @@ def configure() {
 		zwave.configurationV1.configurationGet(parameterNumber: 113),
 		
 		// Can use the zwaveHubNodeId variable to add the hub to the device's associations:
-		zwave.associationV1.associationSet(groupingIdentifier:2, nodeId:zwaveHubNodeId)
+		zwave.associationV1.associationSet(groupingIdentifier:1, nodeId:zwaveHubNodeId),
+		zwave.associationV1.associationSet(groupingIdentifier:2, nodeId:zwaveHubNodeId),
+		zwave.associationV1.associationSet(groupingIdentifier:3, nodeId:zwaveHubNodeId)
     ]
 	commands(request)
 }
@@ -381,6 +408,6 @@ private command(physicalgraph.zwave.Command cmd) {
 	}
 }
 
-private commands(commands, delay=500) {
+private commands(commands, delay=1000) {
 	delayBetween(commands.collect{ command(it) }, delay)
 }

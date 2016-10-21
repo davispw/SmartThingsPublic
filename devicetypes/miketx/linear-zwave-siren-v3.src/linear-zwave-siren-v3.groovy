@@ -85,12 +85,9 @@ metadata {
         standardTile("refresh", "device.refresh", decoration: "flat", width: 2, height: 2) {
             state "default", label:'', action:"refresh.refresh", icon:"st.secondary.refresh"
         }
-        standardTile("configure", "device.configure", decoration: "flat", width: 2, height: 2) {
-            state "default", label:'', action:"configuration.configure", icon:"st.secondary.configure"
-        }
 
         main "panic"
-        details(["multi","mode1","mode2","mode3","battery","refresh", "configure"])
+        details(["multi","mode1","mode2","mode3","battery","refresh"])
     }
 
     preferences {
@@ -103,10 +100,13 @@ metadata {
     }
 }
 
+def updated() {
+	log.debug "Configuring after preferences updated"
+	response(configure())
+}
+
 def setstrobe() {
     log.debug "Setting alarm to strobe."
-//    state.LastAlarmtype = 2
-//    sendEvent(name: "mode", value: "strobe", descriptionText: "Mode is Strobe Only")
     delayBetween([
     	zwave.configurationV1.configurationSet(parameterNumber: 0, size: 1, configurationValue: [2]).format(),
     	zwave.configurationV1.configurationGet(parameterNumber: 0).format()
@@ -115,8 +115,6 @@ def setstrobe() {
 
 def setsiren() {
     log.debug "Setting alarm to siren."
-//    state.LastAlarmtype = 1
-//    sendEvent(name: "mode", value: "siren", descriptionText: "Mode is Siren Only")
     delayBetween([
 	    zwave.configurationV1.configurationSet(parameterNumber: 0, size: 1, configurationValue: [1]).format(),
     	zwave.configurationV1.configurationGet(parameterNumber: 0).format()
@@ -125,8 +123,6 @@ def setsiren() {
 
 def setboth() {
     log.debug "Setting alarm to both."
-//    state.LastAlarmtype = 0
-//    sendEvent(name: "mode", value: "both", descriptionText: "Mode is both Siren & Strobe")
     delayBetween([
 		zwave.configurationV1.configurationSet(parameterNumber: 0, size: 1, configurationValue: [0]).format(),
     	zwave.configurationV1.configurationGet(parameterNumber: 0).format()
@@ -181,13 +177,6 @@ def createEvents(physicalgraph.zwave.commands.basicv1.BasicReport cmd) {
     log.debug "createEvents with cmd value {$cmd.value}, currentMode: $currentMode"
     def alarmValue = "off"
     if (cmd.value) {
-//        if (state.LastAlarmtype == 2) {
-//            alarmValue = "strobe"
-//        } else if (state.LastAlarmtype == 1) {
-//            alarmValue = "siren"
-//        } else {
-//            alarmValue = "both"
-//		}
 		alarmValue = currentMode
     }
 
@@ -292,34 +281,19 @@ def refresh() {
 
 def configure() {
     def autoStopTimeParameter
-    if (autoStopTime == '30') {
-    	log.info "XXX 30"
-    } else if (autoStopTime == '60') {
-    	log.info "XXX 60"
-    } else if (autoStopTime == '60') {
-    	log.info "XXX 60"
-    } else {
-    	log.info "ZZZ $autoStopTime"
-    }
-
-
     switch (settings.autoStopTime) {
     case '60':
     	autoStopTimeParameter = 1
-    	log.info "CASE 60 -> $autoStopTimeParameter"
         break
     case '120':
         autoStopTimeParameter = 2
-    	log.info "CASE 120 -> $autoStopTimeParameter"
         break
     case 'Infinite':
     	autoStopTimeParameter = 3
-    	log.info "CASE Infinite -> $autoStopTimeParameter"
         break
     case '30':
     default:
         autoStopTimeParameter = 0
-    	log.info "CASE 30 -> $autoStopTimeParameter"
         break
     }
     log.debug "autoStopTime: $settings.autoStopTime, autoStopTimeParameter: $autoStopTimeParameter"
